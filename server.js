@@ -12,6 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+app.use(express.json()); // This allows the server to read email/otp from the request
 app.use(express.static(path.join(__dirname))); 
 app.use(express.static(__dirname)); 
 app.get('/', (req, res) => {
@@ -51,11 +52,16 @@ const User = mongoose.model('User', new mongoose.Schema({
 // 2. Unified Email Transporter
 // ==========================================
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465, // SSL Port
+    secure: true, 
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    }
+    },
+    connectionTimeout: 10000, // Wait 10 seconds before giving up
+    greetingTimeout: 5000,
+    socketTimeout: 10000
 });
 
 transporter.verify((error) => {
@@ -267,3 +273,4 @@ app.listen(PORT, () => {
     `);
 
 });
+
