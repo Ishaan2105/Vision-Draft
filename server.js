@@ -56,10 +56,13 @@ const User = mongoose.model('User', new mongoose.Schema({
 // 2. Unified Email Transporter (Cloud Optimized)
 // ==========================================
 const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com', // Explicitly set the host
+  port: 465,             // Use Port 465 for SSL (often works better on cloud hosts)
+  secure: true,          // true for 465
   service: 'gmail',
   auth: {
     type: 'OAuth2',
-    user: process.env.EMAIL_USER, // ishaanhingway@gmail.com
+    user: process.env.EMAIL_USER,
     clientId: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
     refreshToken: process.env.REFRESH_TOKEN
@@ -259,6 +262,7 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 
 
 
