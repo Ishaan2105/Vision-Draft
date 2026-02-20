@@ -56,21 +56,14 @@ const User = mongoose.model('User', new mongoose.Schema({
 // 2. Unified Email Transporter (Cloud Optimized)
 // ==========================================
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587, // Change from 465 to 587
-    secure: false, // Must be false for port 587
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    // Adding extra time and opportunistic TLS
-    connectionTimeout: 20000, 
-    greetingTimeout: 20000,
-    socketTimeout: 25000,
-    tls: {
-        ciphers: 'SSLv3', // Helps negotiate with Gmail from cloud IPs
-        rejectUnauthorized: false
-    }
+  service: 'gmail',
+  auth: {
+    type: 'OAuth2',
+    user: process.env.EMAIL_USER, // ishaanhingway@gmail.com
+    clientId: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    refreshToken: process.env.REFRESH_TOKEN
+  }
 });
 
 transporter.verify((error) => {
@@ -81,43 +74,59 @@ transporter.verify((error) => {
     }
 });
 
+const sendOTP = async (email, otp) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Your Vision Draft Verification Code',
+    text: `Your OTP is: ${otp}. It expires in 10 minutes.`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ OTP sent successfully to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Gmail API Error:', error.message);
+    throw new Error('Failed to send OTP. Please try again.');
+  }
+};
+
 // ==========================================
 // 3. Authentication & Recovery Routes
 // ==========================================
 
-app.post('/send-otp', (req, res) => {
-    // req.body is now populated because express.json() is at the top
+app.post('/send-otp', async (req, res) => {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).send("Email and OTP are required");
 
-    const mailOptions = {
-        from: '"Vision Draft Support" <ishaanhingway@gmail.com>',
-        to: email,
-        subject: "Your Registration OTP",
-        text: `Welcome to Vision Draft! Your verification code is: ${otp}`
-    };
-
-    transporter.sendMail(mailOptions, (err) => {
-        if (err) return res.status(500).send("Failed to send OTP email.");
+    try {
+        // Use your specialized sendOTP function here!
+        await sendOTP(email, otp); 
         res.status(200).send("OTP Sent successfully");
-    });
+    } catch (err) {
+        res.status(500).send("Failed to send OTP email.");
+    }
 });
 
-app.post('/send-reset-email', (req, res) => {
+app.post('/send-reset-email', async (req, res) => {
     const { email, newPass } = req.body;
     if (!email || !newPass) return res.status(400).send("Email and password required");
 
     const mailOptions = {
-        from: '"Vision Draft Support" <ishaanhingway@gmail.com>',
+        from: process.env.EMAIL_USER, // Uses your verified email
         to: email,
         subject: 'Account Recovery - New Password',
         text: `Your new temporary password is: ${newPass}`
     };
 
-    transporter.sendMail(mailOptions, (error) => {
-        if (error) return res.status(500).send("Failed to send recovery email.");
+    try {
+        await transporter.sendMail(mailOptions);
         res.status(200).send("Recovery email sent");
-    });
+    } catch (error) {
+        console.error('❌ Reset Email Error:', error.message);
+        res.status(500).send("Failed to send recovery email.");
+    }
 });
 
 // ==========================================
@@ -226,18 +235,18 @@ app.post('/api/recover-password', async (req, res) => {
         const user = await User.findOneAndUpdate({ email: email }, { password: newPass });
         if (!user) return res.status(404).json({ error: "Email not found" });
 
+        // Use the sendMail promise-based approach for consistency
         const mailOptions = {
-            from: '"Vision Draft Support" <ishaanhingway@gmail.com>',
+            from: process.env.EMAIL_USER,
             to: email,
             subject: 'Account Recovery - New Password',
             text: `Your new temporary password is: ${newPass}`
         };
 
-        transporter.sendMail(mailOptions, (error) => {
-            if (error) return res.status(500).json({ error: "Failed to send email" });
-            res.status(200).json({ message: "Email sent" });
-        });
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ message: "Email sent" });
     } catch (err) {
+        console.error('Recovery Error:', err);
         res.status(500).json({ error: "Server recovery error" });
     }
 });
@@ -250,6 +259,7 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 
 
 
