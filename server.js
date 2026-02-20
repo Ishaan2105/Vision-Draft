@@ -13,8 +13,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json()); // This allows the server to read email/otp from the request
-app.use(express.static(path.join(__dirname))); 
-app.use(express.static(__dirname)); 
+app.use(express.static(__dirname));
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -275,5 +274,6 @@ app.listen(PORT, () => {
     `);
 
 });
+
 
 
