@@ -53,17 +53,19 @@ const User = mongoose.model('User', new mongoose.Schema({
 // 2. Unified Email Transporter (Cloud Optimized)
 // ==========================================
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // Let Nodemailer handle the settings
+    host: 'smtp.gmail.com',
+    port: 465, // SSL
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-    connectionTimeout: 10000, 
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-    tls: {
-        rejectUnauthorized: false // Bypasses handshake timeouts on Render
-    }
+    // Adding a longer timeout and debug info
+    connectionTimeout: 20000, // 20 seconds
+    greetingTimeout: 20000,
+    socketTimeout: 25000,
+    debug: true, // This will show more detail in Render logs
+    logger: true
 });
 
 transporter.verify((error) => {
@@ -241,3 +243,4 @@ app.post('/api/recover-password', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Vision Draft Backend Active on Port ${PORT}`);
 });
+
