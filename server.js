@@ -14,6 +14,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.static(path.join(__dirname))); 
 app.use(express.static(__dirname)); 
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 // app.get('/', (req, res) => {
 //     res.send("🚀 Vision Draft API is online! Use the frontend dashboard to generate art.");
 // });
@@ -262,4 +265,5 @@ app.listen(PORT, () => {
 📍 Local URL: http://localhost:${PORT}
 📧 Linked to: ishaanhingway@gmail.com
     `);
+
 });
