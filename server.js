@@ -52,16 +52,18 @@ const User = mongoose.model('User', new mongoose.Schema({
 // 2. Unified Email Transporter
 // ==========================================
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465, // SSL Port
-    secure: true, 
+    service: 'gmail', // Adding this explicitly helps Render recognize the provider
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-    connectionTimeout: 10000, // Wait 10 seconds before giving up
-    greetingTimeout: 5000,
-    socketTimeout: 10000
+    // Adding these specifically for cloud stability
+    connectionTimeout: 10000, 
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+    tls: {
+        rejectUnauthorized: false // This prevents timeout/handshake errors on Render
+    }
 });
 
 transporter.verify((error) => {
@@ -273,4 +275,5 @@ app.listen(PORT, () => {
     `);
 
 });
+
 
