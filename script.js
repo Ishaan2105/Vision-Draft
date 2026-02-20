@@ -1140,31 +1140,35 @@ function focusImage(id, prompt) {
 /**
  * The final deletion logic triggered by the Modal's RED button
  */
-document.getElementById('confirmDeleteBtn').onclick = async () => {
-    if (imageToDeleteId) {
-        try {
-            // 1. Send the command to MongoDB
-            const response = await fetch(`https://vision-draft.onrender.com/api/delete-art/${imageToDeleteId}`, {
-                method: 'DELETE'
-            });
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
-            if (response.ok) {
-                // 2. CRITICAL: Re-run these to refresh the screen
-                await renderGallery(); 
-                await renderSidebar();
-                
-                showToast("Image removed from cloud", "success");
-            } else {
-                showToast("Server error: Could not delete", "error");
+if (confirmDeleteBtn) {
+    confirmDeleteBtn.onclick = async () => {
+        if (imageToDeleteId) {
+            try {
+                // 1. Send the command to MongoDB
+                const response = await fetch(`https://vision-draft.onrender.com/api/delete-art/${imageToDeleteId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    // 2. CRITICAL: Re-run these to refresh the screen
+                    await renderGallery(); 
+                    await renderSidebar();
+                    
+                    showToast("Image removed from cloud", "success");
+                } else {
+                    showToast("Server error: Could not delete", "error");
+                }
+            } catch (err) {
+                console.error("Delete failed:", err);
+                showToast("Connection lost", "error");
             }
-        } catch (err) {
-            console.error("Delete failed:", err);
-            showToast("Connection lost", "error");
+            
+            closeDeleteModal(); // Close the popup
         }
-        
-        closeDeleteModal(); // Close the popup
-    }
-};
+    };
+}
 
 /**
  * Triggered by the "CANCEL" button or after a successful delete.
