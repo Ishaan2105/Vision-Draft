@@ -246,4 +246,5 @@ app.listen(PORT, () => {
     console.log(`🚀 Vision Draft Backend Active on Port ${PORT}`);
 });
 
+module.exports = app;
 
