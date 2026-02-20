@@ -539,7 +539,7 @@ async function handleLogin(e) {
     const pass = document.getElementById('loginPass').value;
 
     try {
-        const response = await fetch('https://vision-draft.onrender.com0/api/login', {
+        const response = await fetch('https://vision-draft.onrender.com/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: user, password: pass })
@@ -607,7 +607,7 @@ async function renderGallery() {
 
     try {
         // Fetch history from your MongoDB via the backend
-        const response = await fetch(`https://vision-draft.onrender.com0/api/history/${user}`);
+        const response = await fetch(`https://vision-draft.onrender.com/api/history/${user}`);
         const history = await response.json();
 
         if (history.length === 0) {
@@ -660,7 +660,7 @@ async function confirmSingleDelete() {
     if (!imageToDeleteId) return;
 
     try {
-        const response = await fetch(`https://vision-draft.onrender.com0/api/delete-art/${imageToDeleteId}`, {
+        const response = await fetch(`https://vision-draft.onrender.com/api/delete-art/${imageToDeleteId}`, {
             method: 'DELETE'
         });
 
@@ -785,7 +785,7 @@ async function confirmClearHistory() {
 
     try {
         // 2. Request the backend to clear the specific user's collection
-        const response = await fetch(`https://vision-draft.onrender.com0/api/clear-history/${user}`, {
+        const response = await fetch(`https://vision-draft.onrender.com/api/clear-history/${user}`, {
             method: 'DELETE'
         });
 
@@ -909,7 +909,7 @@ async function finalizeAccountCreation(e) {
 
     try {
         // Sends registration data directly to MongoDB
-        const response = await fetch('https://vision-draft.onrender.com0/api/register', {
+        const response = await fetch('https://vision-draft.onrender.com/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: user, email: email, password: pass })
@@ -949,7 +949,7 @@ async function handleInitialSignup(e) {
     // 3. THE BRIDGE (Send to Server)
     try {
         console.log("Attempting to connect to server..."); // Debug line
-        const response = await fetch('https://vision-draft.onrender.com0/send-otp', {
+        const response = await fetch('https://vision-draft.onrender.com/send-otp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email, otp: generatedOtp })
@@ -1051,7 +1051,7 @@ async function finalizeAccountCreation(e) {
     const pass = document.getElementById('regPass').value;
 
     try {
-        const response = await fetch('https://vision-draft.onrender.com0/api/register', {
+        const response = await fetch('https://vision-draft.onrender.com/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: user, email: email, password: pass })
@@ -1176,7 +1176,7 @@ document.getElementById('confirmDeleteBtn').onclick = async () => {
     if (imageToDeleteId) {
         try {
             // 1. Send the command to MongoDB
-            const response = await fetch(`https://vision-draft.onrender.com0/api/delete-art/${imageToDeleteId}`, {
+            const response = await fetch(`https://vision-draft.onrender.com/api/delete-art/${imageToDeleteId}`, {
                 method: 'DELETE'
             });
 
