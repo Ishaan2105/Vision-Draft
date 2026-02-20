@@ -17,11 +17,14 @@ const PORT = process.env.PORT || 10000; // Render uses port 10000 by default
 app.use(cors());
 app.use(express.json()); // 1. Parse JSON first so req.body isn't undefined
 app.use(express.static(__dirname)); // 2. Serve static files
-
-// 3. Route for the home page
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
 
 // ==========================================
 // 1. MongoDB Connection
@@ -247,5 +250,6 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 
 
