@@ -854,77 +854,6 @@ function startResendTimer() {
 }
 
 
-
-
-/* =====================================================
-register the OTP verification and final registration logic
-===================================================== */
-// function verifyAndRegister(e) {
-//     if (e) e.preventDefault(); // Prevents the form from re-submitting
-
-//     const enteredOtp = document.getElementById('otpInput').value;
-//     const passField = document.getElementById('regPass');
-//     const checkmark = document.getElementById('emailSuccessCheck');
-//     const emailInput = document.getElementById('regEmail');
-
-//     if (enteredOtp === generatedOtp) {
-//         showToast("Email Verified! Set your password.", "success");
-
-//         // 1. Visual confirmation
-//         if (checkmark) {
-//             checkmark.classList.remove('opacity-0', 'scale-50');
-//             checkmark.classList.add('opacity-100', 'scale-110');
-//             emailInput.style.borderColor = "#10b981";
-//         }
-
-//         // 2. Unlock password
-//         passField.disabled = false;
-//         passField.classList.remove('opacity-50', 'cursor-not-allowed');
-//         passField.focus();
-
-//         // 3. Hide OTP UI and change button purpose
-//         document.getElementById('otpSection').classList.add('hidden');
-//         const mainBtn = document.getElementById('sendOtpBtn');
-//         mainBtn.classList.remove('hidden');
-//         mainBtn.innerText = "FINALIZE REGISTRATION";
-//         mainBtn.style.backgroundColor = "#10b981"; 
-        
-//         // CRITICAL: Change the onclick so it doesn't send another OTP
-//         mainBtn.onclick = finalizeAccountCreation; 
-//     } else {
-//         showToast("Invalid OTP. Please try again.", "error");
-//     }
-// }
-
-// // 4. New function to actually save the account
-// async function finalizeAccountCreation(e) {
-//     if (e) e.preventDefault();
-//     const user = document.getElementById('regUser').value.trim();
-//     const email = document.getElementById('regEmail').value.trim();
-//     const pass = document.getElementById('regPass').value;
-
-//     try {
-//         // Sends registration data directly to MongoDB
-//         const response = await fetch('https://vision-draft.onrender.com/api/register', {
-//             method: 'POST',
-//             headers: { 'Content-Type': 'application/json' },
-//             body: JSON.stringify({ username: user, email: email, password: pass })
-//         });
-
-//         if (response.ok) {
-//             // Note: We no longer save to 'visiondraft_users' LocalStorage
-//             showToast("Studio Created in Cloud!", "success");
-//             setTimeout(() => location.reload(), 1500);
-//         } else {
-//             showToast("Registration failed. Username or Email may exist.", "error");
-//         }
-//     } catch (err) {
-//         showToast("Server offline - Cannot create account", "error");
-//     }
-// }
-
-
-
 /* =====================================================
     🔐 FOOLPROOF REGISTRATION FLOW
 ===================================================== */
@@ -1034,49 +963,6 @@ async function finalizeAccountCreation(e) {
         showToast("Cloud connection error", "error");
     }
 }
-
-
-
-// // correct otp
-
-// if (enteredOtp === generatedOtp) {
-//     showToast("Email Verified! Set your password.", "success");
-
-//     // ✅ ADDED: Show the Success Checkmark with animation
-//     const checkmark = document.getElementById('emailSuccessCheck');
-//     if (checkmark) {
-//         checkmark.classList.remove('opacity-0', 'scale-50');
-//         checkmark.classList.add('opacity-100', 'scale-110');
-        
-//         // Change the email input border to emerald to match
-//         document.getElementById('regEmail').style.borderColor = "#10b981";
-//     }
-
-//     // ... rest of your existing unlock code ...
-//     passField.disabled = false;
-//     passField.classList.remove('opacity-50', 'cursor-not-allowed');
-// }
-
-// ccount user initials in the profile menu
-// Run this function when the page loads
-// document.addEventListener('DOMContentLoaded', () => {
-//     const currentUser = localStorage.getItem('visiondraft_currentUser');
-    
-//     if (currentUser) {
-//         // 1. Update the Initial (The circle)
-//         const initialElement = document.getElementById('userInitial');
-//         if (initialElement) {
-//             initialElement.innerText = currentUser.charAt(0).toUpperCase();
-//         }
-
-//         // 2. Update the Name Text
-//         const nameElement = document.getElementById('displayUsername');
-//         if (nameElement) {
-//             nameElement.innerText = currentUser.toLowerCase();
-//         }
-//     }
-// });
-
 
 
 // user's inital
