@@ -1,6 +1,7 @@
 let generatedOtp = null;
 let countdown;
 let imageToDeleteId = null;
+let countdownInterval;
 
 /* =====================================================
     🌍 COUNTRY LIST
@@ -886,28 +887,38 @@ async function handleInitialSignup(e) {
             body: JSON.stringify({ email: email, otp: generatedOtp })
         });
         
+        // --- LOGIC CHANGE START ---
         if (response.ok) {
-            // SUCCESS PATH
             showToast("OTP sent to your email!", "success");
             
             const otpSection = document.getElementById('otpSection');
             if (otpSection) otpSection.classList.remove('hidden');
             
-            // Check if function exists before calling to prevent catch-block trigger
-            if (typeof startResendTimer === "function") {
-                startResendTimer();
-            }
-        } else {
-            // Server returned 400/500
-            throw new Error("Server error");
-        }
-    } catch (err) {
-        // ACTUAL FAILURE PATH
-        console.error("OTP Error:", err);
-        showToast("Email failed. Try again.", "error");
+            // Safety wrapper to prevent any timer errors from triggering the catch block
+            // try {
+            //     if (typeof startResendTimer === "function") {
+            //         startResendTimer();
+            //     }
+            // } catch (timerErr) {
+            //     console.warn("Timer failed but email was sent:", timerErr);
+            // }
+            
+            return; // EXIT HERE. Do not let it reach any error code.
+        } 
         
-        sendBtn.disabled = false;
-        sendBtn.innerText = "RETRY SENDING";
+        // If we reach here, response was NOT ok
+        showToast("Server rejected request. Try again.", "error");
+
+    } catch (err) {
+        // This catch block will now ONLY show a toast if the FETCH itself fails (e.g. No Internet)
+        console.error("Network/System Error:", err);
+        showToast("Connection failed. Check your internet.", "error");
+    } finally {
+        // Always reset button state if it didn't succeed
+        if (sendBtn.innerText === "SENDING...") {
+            sendBtn.disabled = false;
+            sendBtn.innerText = "RETRY SENDING";
+        }
     }
 }
 
