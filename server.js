@@ -144,6 +144,17 @@ app.post('/api/recover-password', async (req, res) => {
 // 4. API Routes (History & User Management)
 // ==========================================
 
+// --- ADMIN ROUTE ---
+// Access this at: https://vision-draft.onrender.com/api/admin/all-users
+app.get('/api/admin/all-users', async (req, res) => {
+    try {
+        const users = await User.find({}, 'username email createdAt'); // Password hidden for security
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ error: "Error fetching user list" });
+    }
+});
+
 app.post('/api/save-art', async (req, res) => {
     try {
         const { username, prompt, url, size } = req.body;
