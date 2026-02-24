@@ -1,6 +1,7 @@
 let generatedOtp = null;
 let countdown;
 let imageToDeleteId = null;
+let countdownInterval;
 
 /* =====================================================
     🌍 COUNTRY LIST
@@ -832,23 +833,28 @@ function isValidPhone(phone) {
     return phoneRegex.test(phone);
 }
 
-
-
-
+// ==========================================
+// THE TIMER FUNCTION
+// ==========================================
 function startResendTimer() {
-    let timeLeft = 10;
-    const resendBtn = document.getElementById('resendBtn');
-    const timerText = document.getElementById('timerText');
+    let timeLeft = 30; // 30 seconds as requested
+    const sendOtpBtn = document.getElementById('send-otp-btn');
 
-    resendBtn.disabled = true;
-    countdown = setInterval(() => {
-        timerText.innerText = `(in ${timeLeft}s)`;
-        timeLeft--;
+    if (!sendOtpBtn) return; // Safety check
 
-        if (timeLeft < 0) {
-            clearInterval(countdown);
-            resendBtn.disabled = false;
-            timerText.innerText = "";
+    // Clear any existing timers to prevent overlapping
+    clearInterval(countdownInterval);
+    
+    sendOtpBtn.disabled = true;
+
+    countdownInterval = setInterval(() => {
+        if (timeLeft <= 0) {
+            clearInterval(countdownInterval);
+            sendOtpBtn.disabled = false;
+            sendOtpBtn.innerText = "Send OTP"; // Reset button text
+        } else {
+            sendOtpBtn.innerText = `Resend in ${timeLeft}s`;
+            timeLeft--;
         }
     }, 1000);
 }
@@ -862,40 +868,53 @@ function startResendTimer() {
 async function handleInitialSignup(e) {
     if (e) e.preventDefault();
     
-    const email = document.getElementById('regEmail').value.trim();
-    const user = document.getElementById('regUser').value.trim();
-    const sendBtn = document.getElementById('sendOtpBtn');
+    // 1. Get exact IDs from your HTML
+    const emailInput = document.getElementById('reg-email'); 
+    const userInput = document.getElementById('reg-user');
+    const sendBtn = document.getElementById('send-otp-btn');
+    const otpSection = document.getElementById('otp-section');
+
+    const email = emailInput ? emailInput.value.trim() : "";
+    const user = userInput ? userInput.value.trim() : "";
 
     if (!email || !user) return showToast("Enter Username and Email", "error");
 
-    // UI Feedback
+    // 2. UI Feedback: Lock the button
     sendBtn.disabled = true;
     sendBtn.innerText = "SENDING...";
 
-    generatedOtp = Math.floor(10000 + Math.random() * 90000).toString();
+    // 3. Generate 6-digit OTP locally
+    generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
 
     try {
         const response = await fetch('https://vision-draft.onrender.com/send-otp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email, otp: generatedOtp })
+            body: JSON.stringify({ email: email, otp: generatedOTP })
         });
         
         if (response.ok) {
+            // SUCCESS PATH
             showToast("OTP sent to your email!", "success");
-            document.getElementById('otpSection').classList.remove('hidden');
-            sendBtn.classList.add('hidden');
-            startOtpTimer();
+            
+            // Show the OTP input section and hide the original button
+            if (otpSection) otpSection.style.display = 'block';
+            
+            // Start the 30s countdown
+            startResendTimer(); 
         } else {
-            throw new Error("Failed to send");
+            // This jump-starts the catch block to prevent double-toasts
+            throw new Error("Server rejected request");
         }
-    } catch (err) {
-        showToast("Email failed. Check console for OTP.", "error");
-        console.log("DEBUG OTP:", generatedOtp);
-        // Fallback for dev: show OTP fields anyway
-        document.getElementById('otpSection').classList.remove('hidden');
-        sendBtn.classList.add('hidden');
-    }
+    // } catch (err) {
+    //     // ERROR PATH
+    //     console.error("OTP Error:", err);
+    //     showToast("Failed to send OTP. Please try again.", "error");
+        
+    //     // Reset button so user can try again
+    //     sendBtn.disabled = false;
+    //     sendBtn.innerText = "SEND OTP";
+    // }
 }
 
 // Phase 2: Verify OTP
