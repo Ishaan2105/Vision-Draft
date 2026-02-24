@@ -889,13 +889,14 @@ async function handleInitialSignup(e) {
         } else {
             throw new Error("Failed to send");
         }
-    } catch (err) {
-        showToast("Email failed. Check console for OTP.", "error");
-        console.log("DEBUG OTP:", generatedOtp);
-        // Fallback for dev: show OTP fields anyway
-        document.getElementById('otpSection').classList.remove('hidden');
-        sendBtn.classList.add('hidden');
-    }
+    } 
+    // catch (err) {
+    //     showToast("Email failed. Check console for OTP.", "error");
+    //     console.log("DEBUG OTP:", generatedOtp);
+    //     // Fallback for dev: show OTP fields anyway
+    //     document.getElementById('otpSection').classList.remove('hidden');
+    //     sendBtn.classList.add('hidden');
+    // }
 }
 
 // Phase 2: Verify OTP
