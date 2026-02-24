@@ -872,7 +872,7 @@ async function handleInitialSignup(e) {
     sendBtn.disabled = true;
     sendBtn.innerText = "SENDING...";
 
-    generatedOtp = Math.floor(10000 + Math.random() * 90000).toString();
+    generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     try {
         const response = await fetch('https://vision-draft.onrender.com/send-otp', {
@@ -882,21 +882,26 @@ async function handleInitialSignup(e) {
         });
         
         if (response.ok) {
+            // SUCCESS PATH: Stop here if everything is fine
             showToast("OTP sent to your email!", "success");
             document.getElementById('otpSection').classList.remove('hidden');
             sendBtn.classList.add('hidden');
-            startOtpTimer();
+            
+            // Start your timer here
+            if (typeof startResendTimer === "function") startResendTimer();
         } else {
-            throw new Error("Failed to send");
+            // If server returns an error (like 404 or 500)
+            throw new Error("Server rejected the request");
         }
-    } 
-    // catch (err) {
-    //     showToast("Email failed. Check console for OTP.", "error");
-    //     console.log("DEBUG OTP:", generatedOtp);
-    //     // Fallback for dev: show OTP fields anyway
-    //     document.getElementById('otpSection').classList.remove('hidden');
-    //     sendBtn.classList.add('hidden');
-    // }
+    } catch (err) {
+        // ERROR PATH: Only runs if the fetch fails or an error is thrown above
+        console.error("OTP Error:", err);
+        showToast("Failed to send OTP. Please try again.", "error");
+        
+        // Reset button so they can try again
+        sendBtn.disabled = false;
+        sendBtn.innerText = "SEND OTP";
+    }
 }
 
 // Phase 2: Verify OTP
