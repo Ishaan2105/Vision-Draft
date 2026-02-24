@@ -874,11 +874,9 @@ async function handleInitialSignup(e) {
 
     if (!email || !user) return showToast("Enter Username and Email", "error");
 
-    // UI Feedback
     sendBtn.disabled = true;
     sendBtn.innerText = "SENDING...";
 
-    // Generate a fresh OTP for every attempt
     generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     try {
@@ -889,25 +887,25 @@ async function handleInitialSignup(e) {
         });
         
         if (response.ok) {
-            // SUCCESS: Only this toast will show
+            // SUCCESS PATH
             showToast("OTP sent to your email!", "success");
             
-            // Unhide OTP section if it was hidden
             const otpSection = document.getElementById('otpSection');
             if (otpSection) otpSection.classList.remove('hidden');
             
-            // Trigger the timer loop
-            startResendTimer(); 
+            // Check if function exists before calling to prevent catch-block trigger
+            if (typeof startResendTimer === "function") {
+                startResendTimer();
+            }
         } else {
-            // Trigger the catch block manually for server errors
+            // Server returned 400/500
             throw new Error("Server error");
         }
     } catch (err) {
-        // ERROR: This will now ONLY show if the email actually fails
+        // ACTUAL FAILURE PATH
         console.error("OTP Error:", err);
         showToast("Email failed. Try again.", "error");
         
-        // Re-enable button immediately so they don't have to wait to retry
         sendBtn.disabled = false;
         sendBtn.innerText = "RETRY SENDING";
     }
