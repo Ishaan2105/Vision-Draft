@@ -836,19 +836,25 @@ function isValidPhone(phone) {
 
 
 function startResendTimer() {
-    let timeLeft = 10;
-    const resendBtn = document.getElementById('resendBtn');
-    const timerText = document.getElementById('timerText');
+    let timeLeft = 30; // 30 seconds
+    const sendBtn = document.getElementById('sendOtpBtn');
+    
+    if (!sendBtn) return;
 
-    resendBtn.disabled = true;
-    countdown = setInterval(() => {
-        timerText.innerText = `(in ${timeLeft}s)`;
-        timeLeft--;
+    clearInterval(countdownInterval); // Clear any old timers
+    sendBtn.disabled = true; // Lock the button
 
-        if (timeLeft < 0) {
-            clearInterval(countdown);
-            resendBtn.disabled = false;
-            timerText.innerText = "";
+    countdownInterval = setInterval(() => {
+        if (timeLeft <= 0) {
+            clearInterval(countdownInterval);
+            sendBtn.disabled = false; // 1. Make it clickable again
+            sendBtn.innerText = "RESEND OTP"; // 2. Change text to Resend
+            
+            // 3. Ensure clicking it now calls the signup function again
+            sendBtn.onclick = (e) => handleInitialSignup(e); 
+        } else {
+            sendBtn.innerText = `Resend in ${timeLeft}`;
+            timeLeft--;
         }
     }, 1000);
 }
@@ -872,6 +878,7 @@ async function handleInitialSignup(e) {
     sendBtn.disabled = true;
     sendBtn.innerText = "SENDING...";
 
+    // Generate a fresh OTP for every attempt
     generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     try {
@@ -882,25 +889,27 @@ async function handleInitialSignup(e) {
         });
         
         if (response.ok) {
-            // SUCCESS PATH: Stop here if everything is fine
+            // SUCCESS: Only this toast will show
             showToast("OTP sent to your email!", "success");
-            document.getElementById('otpSection').classList.remove('hidden');
-            sendBtn.classList.add('hidden');
             
-            // Start your timer here
-            if (typeof startResendTimer === "function") startResendTimer();
+            // Unhide OTP section if it was hidden
+            const otpSection = document.getElementById('otpSection');
+            if (otpSection) otpSection.classList.remove('hidden');
+            
+            // Trigger the timer loop
+            startResendTimer(); 
         } else {
-            // If server returns an error (like 404 or 500)
-            throw new Error("Server rejected the request");
+            // Trigger the catch block manually for server errors
+            throw new Error("Server error");
         }
     } catch (err) {
-        // ERROR PATH: Only runs if the fetch fails or an error is thrown above
+        // ERROR: This will now ONLY show if the email actually fails
         console.error("OTP Error:", err);
-        showToast("Failed to send OTP. Please try again.", "error");
+        showToast("Email failed. Try again.", "error");
         
-        // Reset button so they can try again
+        // Re-enable button immediately so they don't have to wait to retry
         sendBtn.disabled = false;
-        sendBtn.innerText = "SEND OTP";
+        sendBtn.innerText = "RETRY SENDING";
     }
 }
 
