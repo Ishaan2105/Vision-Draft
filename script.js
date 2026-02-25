@@ -113,7 +113,7 @@ async function handleSignup(e) {
   if (!user || !email) return showToast("Username and Email required", "error");
 
   // 2. Generate OTP for cloud verification
-  generatedOtp = Math.floor(10000 + Math.random() * 90000).toString();
+generatedOtp = Math.floor(10000 + Math.random() * 90000).toString();
 
   // 3. UI logic to show OTP section
   document.getElementById('otpSection').classList.remove('hidden');
