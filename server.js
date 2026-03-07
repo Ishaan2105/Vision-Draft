@@ -275,7 +275,7 @@ app.post('/api/register', async (req, res) => {
         const { username, email, password } = req.body;
 
         // 1. Basic Validation
-        if (!username || !email || !password) {
+        if (!username || !email ) {
             return res.status(400).json({ message: "All fields are required." });
         }
 
@@ -345,6 +345,7 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 
 
 
