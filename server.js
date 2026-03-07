@@ -64,22 +64,7 @@ oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
  */
 const sendGmail = async (to, subject, bodyContent) => {
     try {
-        // 1. Initialize the OAuth2 client inside the function
-        const oauth2Client = new google.auth.OAuth2(
-            process.env.CLIENT_ID,
-            process.env.CLIENT_SECRET,
-            "https://developers.google.com/oauthplayground"
-        );
-
-        oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
-
-        // 2. CRITICAL: Get a fresh access token
-        // If this line fails, your REFRESH_TOKEN is expired or revoked.
-        const { token } = await oauth2Client.getAccessToken();
-        
         const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-
-        // 3. Prepare the Email MIME structure
         const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
         const messageParts = [
             `From: Vision Draft <${process.env.EMAIL_USER}>`,
@@ -98,16 +83,13 @@ const sendGmail = async (to, subject, bodyContent) => {
             .replace(/\//g, '_')
             .replace(/=+$/, '');
 
-        // 4. Send via Gmail API
         await gmail.users.messages.send({
             userId: 'me',
             requestBody: { raw: encodedMessage },
         });
-
         return true;
     } catch (error) {
-        // This will print the exact reason in your Render Logs
-        console.error('❌ Gmail API Error Detail:', error.message);
+        console.error('❌ Gmail API Error:', error.message);
         throw error;
     }
 };
@@ -119,40 +101,14 @@ const sendGmail = async (to, subject, bodyContent) => {
 // Route for Registration OTP
 app.post('/send-otp', async (req, res) => {
     const { email, otp } = req.body;
-
-    // 1. Validation
-    if (!email || !otp) {
-        console.error("❌ Send-OTP Failed: Missing email or OTP in request body");
-        return res.status(400).json({ message: "Email and OTP are required" });
-    }
+    if (!email || !otp) return res.status(400).send("Email and OTP are required");
 
     try {
-        // 2. Attempt to send email
-        // We use .toLowerCase() to ensure no casing issues with email addresses
-        await sendGmail(
-            email.toLowerCase(), 
-            'Verification Code - Vision Draft', 
-            `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #2563eb;">Vision Draft Verification</h2>
-                <p>Your 6-digit verification code is:</p>
-                <h1 style="letter-spacing: 5px; color: #111;">${otp}</h1>
-                <p style="font-size: 12px; color: #666;">This code will expire in 10 minutes.</p>
-            </div>`
-        );
-
-        console.log(`✅ OTP [${otp}] sent successfully to ${email}`);
-        res.status(200).json({ message: "OTP Sent successfully" });
-
+        await sendGmail(email, 'Your Vision Draft Verification Code', `Your verification code is: <b>${otp}</b>`);
+        console.log(`✅ OTP sent successfully to ${email}`);
+        res.status(200).send("OTP Sent successfully");
     } catch (err) {
-        // 3. Detailed Error Logging
-        console.error("❌ GMAIL SERVICE ERROR:", err.message);
-        
-        // This helps you identify if the issue is 'Invalid Grant' (Token expired) 
-        // or 'Bad Request' (Wrong Client ID)
-        res.status(500).json({ 
-            message: "Failed to send OTP email.", 
-            error: err.message 
-        });
+        res.status(500).send("Failed to send OTP email.");
     }
 });
 
@@ -275,7 +231,7 @@ app.post('/api/register', async (req, res) => {
         const { username, email, password } = req.body;
 
         // 1. Basic Validation
-        if (!username || !email ) {
+        if (!username || !email || !password) {
             return res.status(400).json({ message: "All fields are required." });
         }
 
@@ -345,8 +301,4 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
-
-
-
-
 
