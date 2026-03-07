@@ -105,35 +105,47 @@ function expandPrompt() {
  * Replaces the old LocalStorage-based handleSignup.
  */
 async function handleSignup(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
+  
   const user = document.getElementById('regUser').value.trim();
   const email = document.getElementById('regEmail').value.trim();
+  const sendBtn = document.getElementById('sendOtpBtn');
 
-  // 1. Basic validation
   if (!user || !email) return showToast("Username and Email required", "error");
 
-  // 2. Generate OTP for cloud verification
-generatedOtp = Math.floor(10000 + Math.random() * 90000).toString();
+  // UI Feedback
+  sendBtn.disabled = true;
+  sendBtn.innerText = "SENDING...";
 
-  // 3. UI logic to show OTP section
-  document.getElementById('otpSection').classList.remove('hidden');
-  document.getElementById('sendOtpBtn').classList.add('hidden');
-  startOtpTimer();
+  // 6-Digit Generation
+  generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // 4. Send request to your Node.js server to trigger the email
   try {
     const response = await fetch('https://vision-draft.onrender.com/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, otp: generatedOtp })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, otp: generatedOtp })
     });
-    
+
     if (response.ok) {
-        showToast("Verification email sent!", "success");
+      showToast("Verification email sent!", "success");
+      
+      const otpSection = document.getElementById('otpSection');
+      if (otpSection) otpSection.classList.remove('hidden');
+      
+      sendBtn.classList.add('hidden'); // Hide button so they can't spam it
+      
+      return; // CRITICAL: Stop here so it doesn't hit the catch block
     }
+    
+    throw new Error("Server rejected request");
+
   } catch (err) {
-    showToast("Server offline - check console for OTP", "error");
-    console.log("Dev OTP:", generatedOtp);
+    console.error("OTP Error:", err);
+    showToast("Email failed. Try again.", "error");
+    
+    sendBtn.disabled = false;
+    sendBtn.innerText = "RETRY SENDING";
   }
 }
 
@@ -923,41 +935,50 @@ async function handleInitialSignup(e) {
 }
 
 // Phase 2: Verify OTP
-function verifyAndRegister(e) {
-    if (e) e.preventDefault();
+/* =====================================================
+    🏁 FINAL REGISTRATION & VERIFICATION
+===================================================== */
+async function verifyAndRegister() {
+    const username = document.getElementById('regUser').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPass').value.trim();
     const enteredOtp = document.getElementById('otpInput').value.trim();
-    const passField = document.getElementById('regPass');
-    const checkmark = document.getElementById('emailSuccessCheck');
-    const emailInput = document.getElementById('regEmail');
 
-    if (enteredOtp === generatedOtp) {
-        showToast("Email Verified!", "success");
+    // 1. Basic Validation
+    if (!enteredOtp) return showToast("Please enter the OTP", "error");
+    if (enteredOtp !== generatedOtp) return showToast("Invalid OTP. Check your mail.", "error");
 
-        // UI Success States
-        if (checkmark) {
-            checkmark.classList.remove('opacity-0', 'scale-50');
-            checkmark.classList.add('opacity-100', 'scale-110');
-            emailInput.style.borderColor = "#10b981";
+    try {
+        // 2. Send Registration Data to Backend
+        const response = await fetch('https://vision-draft.onrender.com/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: username,
+                email: email,
+                password: password
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // SUCCESS
+            showToast("Registration Successful!", "success");
+            
+            // Optional: Automatically log them in or redirect
+            setTimeout(() => {
+                location.reload(); // Refresh to show login state
+            }, 2000);
+        } else {
+            // ERROR: This catches "Email already used" or "Username taken"
+            // It uses the exact message sent by your server.js
+            showToast(data.message || "Registration failed", "error");
         }
 
-        // Unlock Password Field
-        passField.disabled = false;
-        passField.classList.remove('opacity-50', 'cursor-not-allowed');
-        passField.placeholder = "Create your password";
-        passField.focus();
-
-        // Switch Button to "Finalize"
-        document.getElementById('otpSection').classList.add('hidden');
-        const mainBtn = document.getElementById('sendOtpBtn');
-        mainBtn.classList.remove('hidden');
-        mainBtn.disabled = false;
-        mainBtn.innerText = "FINALIZE REGISTRATION";
-        mainBtn.style.backgroundColor = "#10b981";
-        
-        // Update click handler to next phase
-        mainBtn.onclick = finalizeAccountCreation;
-    } else {
-        showToast("Invalid OTP", "error");
+    } catch (err) {
+        console.error("Registration Error:", err);
+        showToast("Connection lost. Try again.", "error");
     }
 }
 
