@@ -64,7 +64,7 @@ oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
  */
 const sendGmail = async (to, subject, bodyContent) => {
     try {
-        // 1. Force the OAuth client to get a fresh access token
+        // 1. Initialize the OAuth2 client inside the function
         const oauth2Client = new google.auth.OAuth2(
             process.env.CLIENT_ID,
             process.env.CLIENT_SECRET,
@@ -73,12 +73,13 @@ const sendGmail = async (to, subject, bodyContent) => {
 
         oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
 
-        // This is the CRITICAL line: it refreshes the token if it's expired
+        // 2. CRITICAL: Get a fresh access token
+        // If this line fails, your REFRESH_TOKEN is expired or revoked.
         const { token } = await oauth2Client.getAccessToken();
         
         const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-        // 2. Prepare the email headers and body
+        // 3. Prepare the Email MIME structure
         const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
         const messageParts = [
             `From: Vision Draft <${process.env.EMAIL_USER}>`,
@@ -91,14 +92,13 @@ const sendGmail = async (to, subject, bodyContent) => {
         ];
         const message = messageParts.join('\n');
 
-        // 3. Base64 URL safe encoding
         const encodedMessage = Buffer.from(message)
             .toString('base64')
             .replace(/\+/g, '-')
             .replace(/\//g, '_')
             .replace(/=+$/, '');
 
-        // 4. Send
+        // 4. Send via Gmail API
         await gmail.users.messages.send({
             userId: 'me',
             requestBody: { raw: encodedMessage },
@@ -106,8 +106,8 @@ const sendGmail = async (to, subject, bodyContent) => {
 
         return true;
     } catch (error) {
+        // This will print the exact reason in your Render Logs
         console.error('❌ Gmail API Error Detail:', error.message);
-        // This will now show up in your Render Logs to tell you if the token is the problem
         throw error;
     }
 };
@@ -345,6 +345,7 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 
 
 
