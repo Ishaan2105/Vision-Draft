@@ -64,7 +64,21 @@ oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
  */
 const sendGmail = async (to, subject, bodyContent) => {
     try {
+        // 1. Force the OAuth client to get a fresh access token
+        const oauth2Client = new google.auth.OAuth2(
+            process.env.CLIENT_ID,
+            process.env.CLIENT_SECRET,
+            "https://developers.google.com/oauthplayground"
+        );
+
+        oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
+
+        // This is the CRITICAL line: it refreshes the token if it's expired
+        const { token } = await oauth2Client.getAccessToken();
+        
         const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+        // 2. Prepare the email headers and body
         const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
         const messageParts = [
             `From: Vision Draft <${process.env.EMAIL_USER}>`,
@@ -77,19 +91,23 @@ const sendGmail = async (to, subject, bodyContent) => {
         ];
         const message = messageParts.join('\n');
 
+        // 3. Base64 URL safe encoding
         const encodedMessage = Buffer.from(message)
             .toString('base64')
             .replace(/\+/g, '-')
             .replace(/\//g, '_')
             .replace(/=+$/, '');
 
+        // 4. Send
         await gmail.users.messages.send({
             userId: 'me',
             requestBody: { raw: encodedMessage },
         });
+
         return true;
     } catch (error) {
-        console.error('❌ Gmail API Error:', error.message);
+        console.error('❌ Gmail API Error Detail:', error.message);
+        // This will now show up in your Render Logs to tell you if the token is the problem
         throw error;
     }
 };
@@ -327,5 +345,6 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 
 
