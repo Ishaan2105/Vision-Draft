@@ -101,14 +101,40 @@ const sendGmail = async (to, subject, bodyContent) => {
 // Route for Registration OTP
 app.post('/send-otp', async (req, res) => {
     const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).send("Email and OTP are required");
+
+    // 1. Validation
+    if (!email || !otp) {
+        console.error("❌ Send-OTP Failed: Missing email or OTP in request body");
+        return res.status(400).json({ message: "Email and OTP are required" });
+    }
 
     try {
-        await sendGmail(email, 'Your Vision Draft Verification Code', `Your verification code is: <b>${otp}</b>`);
-        console.log(`✅ OTP sent successfully to ${email}`);
-        res.status(200).send("OTP Sent successfully");
+        // 2. Attempt to send email
+        // We use .toLowerCase() to ensure no casing issues with email addresses
+        await sendGmail(
+            email.toLowerCase(), 
+            'Verification Code - Vision Draft', 
+            `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                <h2 style="color: #2563eb;">Vision Draft Verification</h2>
+                <p>Your 6-digit verification code is:</p>
+                <h1 style="letter-spacing: 5px; color: #111;">${otp}</h1>
+                <p style="font-size: 12px; color: #666;">This code will expire in 10 minutes.</p>
+            </div>`
+        );
+
+        console.log(`✅ OTP [${otp}] sent successfully to ${email}`);
+        res.status(200).json({ message: "OTP Sent successfully" });
+
     } catch (err) {
-        res.status(500).send("Failed to send OTP email.");
+        // 3. Detailed Error Logging
+        console.error("❌ GMAIL SERVICE ERROR:", err.message);
+        
+        // This helps you identify if the issue is 'Invalid Grant' (Token expired) 
+        // or 'Bad Request' (Wrong Client ID)
+        res.status(500).json({ 
+            message: "Failed to send OTP email.", 
+            error: err.message 
+        });
     }
 });
 
@@ -301,4 +327,5 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 
