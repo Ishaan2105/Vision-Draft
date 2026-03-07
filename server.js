@@ -222,14 +222,56 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+/* =====================================================
+    📝 USER REGISTRATION ROUTE (Email Guard Version)
+===================================================== */
+
 app.post('/api/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
-        const newUser = new User({ username, email, password });
-        await newUser.save(); 
-        res.status(201).json({ success: true, message: "User registered in cloud" });
-    } catch (err) {
-        res.status(500).json({ error: "Registration failed" });
+
+        // 1. Basic Validation
+        if (!username || !email || !password) {
+            return res.status(400).json({ message: "All fields are required." });
+        }
+
+        const lowerEmail = email.toLowerCase();
+
+        // 2. Check specifically for existing Email
+        const existingEmail = await User.findOne({ email: lowerEmail });
+        if (existingEmail) {
+            // This message will trigger your "email already used" popup
+            return res.status(400).json({ message: "Email already used" });
+        }
+
+        // 3. Check specifically for existing Username
+        const existingUser = await User.findOne({ username: username });
+        if (existingUser) {
+            return res.status(400).json({ message: "Username already taken" });
+        }
+
+        // 4. Create and Save New User
+        const newUser = new User({
+            username,
+            email: lowerEmail,
+            password // Suggestion: use bcrypt.hash later for security
+        });
+
+        await newUser.save();
+
+        // 5. Success Response
+        console.log(`✅ Registration Successful: ${username} (${lowerEmail})`);
+        res.status(201).json({ message: "Registration successful! You can now login." });
+
+    } catch (error) {
+        console.error("❌ REGISTRATION CRASH:", error);
+        
+        // Final safety net for MongoDB unique indexing errors
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "Email or Username already exists." });
+        }
+
+        res.status(500).json({ message: "Internal Server Error. Please try again later." });
     }
 });
 
@@ -259,3 +301,4 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
