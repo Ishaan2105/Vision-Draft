@@ -936,98 +936,69 @@ async function handleInitialSignup(e) {
 
 // Phase 2: Verify OTP
 /* =====================================================
-    🏁 FINAL REGISTRATION & VERIFICATION
+    🏁 FINAL REGISTRATION & VERIFICATION (UPDATED)
 ===================================================== */
 
-async function finalizeRegistration() {
-    const username = document.getElementById('regUser').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const password = document.getElementById('regPass').value.trim();
-
-    if (!password || password.length < 6) {
-        return showToast("Please enter a password (min 6 chars)", "error");
-    }
-
-    try {
-        const response = await fetch('https://vision-draft.onrender.com/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, email, password })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            // SUCCESS: Only now show the "Registration successful" popup
-            showToast("Registration Successful!", "success");
-            
-            setTimeout(() => {
-                // Take him to login page
-                const registerSection = document.getElementById('registerSection');
-                const loginSection = document.getElementById('loginSection');
-                if (registerSection && loginSection) {
-                    registerSection.classList.add('hidden');
-                    loginSection.classList.remove('hidden');
-                } else {
-                    location.reload(); // Fallback
-                }
-            }, 2000);
-        } else {
-            showToast(data.message || "Registration failed", "error");
-        }
-    } catch (err) {
-        console.error("Finalize Error:", err);
-        showToast("Connection lost. Try again.", "error");
-    }
-}
-
-
+// Phase 2: Verify OTP & Unlock Password Field
 async function verifyAndRegister() {
     const otpInput = document.getElementById('otpInput');
     const enteredOtp = otpInput.value.trim();
     const passwordField = document.getElementById('regPass');
     const verifyBtn = document.querySelector('button[onclick="verifyAndRegister()"]');
-    const retryBtn = document.getElementById('resendOtpBtn'); // Ensure this ID exists in HTML
+    
+    // Target the specific button used for Resending OTP
+    const resendBtn = document.getElementById('sendOtpBtn'); 
 
     if (enteredOtp === generatedOtp) {
-        // 1. Success message for OTP only
+        // 1. Show local success (Doesn't save to DB yet)
         showToast("OTP Verified! Now set your password.", "success");
 
-        // 2. Unlock the password field
+        // 2. Stop the Resend Timer so it doesn't overwrite our button text
+        clearInterval(countdownInterval);
+
+        // 3. Unlock and focus the password field
         passwordField.disabled = false;
         passwordField.classList.remove('opacity-50', 'cursor-not-allowed');
-        passwordField.placeholder = "Now enter your password";
+        passwordField.placeholder = "Enter at least 6 characters";
         passwordField.focus();
 
-        // 3. Make Verify button unclickable
+        // 4. Disable the Verify button (Job done)
         verifyBtn.disabled = true;
         verifyBtn.innerText = "Verified ✅";
         verifyBtn.style.opacity = "0.6";
         verifyBtn.style.cursor = "not-allowed";
 
-        // 4. Transform "Retry Sending" button to "Continue"
-        if (retryBtn) {
-            retryBtn.innerText = "Continue";
-            retryBtn.onclick = finalizeAccountCreation; // Switch to the second step
-            retryBtn.style.background = "#10b981"; // Emerald green color
-            retryBtn.style.color = "white";
+        // 5. Transform "Resend" button into "Continue"
+        if (resendBtn) {
+            resendBtn.disabled = false; // Make sure it's clickable
+            resendBtn.innerText = "Continue";
+            resendBtn.onclick = finalizeAccountCreation; // Link to the final step
+            resendBtn.style.background = "#10b981"; // Emerald Green
+            resendBtn.style.color = "white";
+            resendBtn.style.opacity = "1";
         }
     } else {
         showToast("Invalid OTP. Please check your email.", "error");
     }
 }
 
-// Phase 3: Save to MongoDB
+// Phase 3: Final Step - Save to MongoDB
 async function finalizeAccountCreation() {
     const username = document.getElementById('regUser').value.trim();
     const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPass').value.trim();
 
+    // Final security check
     if (!password || password.length < 6) {
-        return showToast("Please set a password (at least 6 characters)", "error");
+        return showToast("Please set a password (min 6 chars)", "error");
     }
 
     try {
+        // Show loading state on the button
+        const continueBtn = document.getElementById('sendOtpBtn');
+        continueBtn.innerText = "CREATING ACCOUNT...";
+        continueBtn.disabled = true;
+
         const response = await fetch('https://vision-draft.onrender.com/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1037,16 +1008,26 @@ async function finalizeAccountCreation() {
         const data = await response.json();
 
         if (response.ok) {
-            // ONLY NOW do we show this popup
+            // ONLY SHOW THIS after the database confirms success
             showToast("Registration successful!", "success");
 
             setTimeout(() => {
-                // Switch to login view
-                document.getElementById('registerSection').classList.add('hidden');
-                document.getElementById('loginSection').classList.remove('hidden');
+                // Smooth transition to Login Section
+                // Ensure these IDs match your HTML (e.g., signupSection or registerSection)
+                const signup = document.getElementById('signupSection') || document.getElementById('registerSection');
+                const login = document.getElementById('loginSection');
+
+                if (signup && login) {
+                    signup.classList.add('hidden');
+                    login.classList.remove('hidden');
+                } else {
+                    location.reload(); 
+                }
             }, 2000);
         } else {
             showToast(data.message || "Registration failed", "error");
+            continueBtn.innerText = "Continue";
+            continueBtn.disabled = false;
         }
     } catch (err) {
         console.error("Final registration error:", err);
