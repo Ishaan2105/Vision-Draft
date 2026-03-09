@@ -945,31 +945,45 @@ async function verifyAndRegister() {
     const enteredOtp = otpInput.value.trim();
     const passwordField = document.getElementById('regPass');
     const verifyBtn = document.querySelector('button[onclick="verifyAndRegister()"]');
-    
+
+    // Target the specific button used for Resending OTP
+    const resendBtn = document.getElementById('sendOtpBtn'); 
+
     if (enteredOtp === generatedOtp) {
-        // 1. Success Message
+        
+        // 1. Show local success (Doesn't save to DB yet)
         showToast("OTP Verified! Now set your password.", "success");
 
-        // 2. Stop the timer
+        // 2. Stop the Resend Timer so it doesn't overwrite our button text
         clearInterval(countdownInterval);
 
-        // 3. Unlock the password field
+        // 3. Unlock and focus the password field
         passwordField.disabled = false;
         passwordField.classList.remove('opacity-50', 'cursor-not-allowed');
-        passwordField.placeholder = "Now enter your password";
+        passwordField.placeholder = "Enter at least 6 characters";
         passwordField.focus();
 
-        // 4. Transform THIS button into the Final Submit button
-        // Do NOT disable it, or they can't click "Finish"
-        verifyBtn.innerText = "FINISH REGISTRATION ✅";
-        verifyBtn.style.background = "#10b981"; // Change to Green
+        // 4. Disable the Verify button (Job done)
+        verifyBtn.disabled = true;
+        verifyBtn.innerText = "Verified ✅";
+        verifyBtn.style.opacity = "0.6";
+        verifyBtn.style.cursor = "not-allowed";
         
-        // CRITICAL: Point the button to the saving function
-        verifyBtn.onclick = finalizeAccountCreation; 
-
+        // 5. Transform "Resend" button into "Continue"
+        if (resendBtn) {
+            resendBtn.disabled = false; // Make sure it's clickable
+            resendBtn.innerText = "Continue";
+            resendBtn.onclick = finalizeAccountCreation; // Link to the final step
+            resendBtn.style.background = "#10b981"; // Emerald Green
+            resendBtn.style.color = "white";
+            resendBtn.style.opacity = "1";
+        }
     } else {
+
         showToast("Invalid OTP. Please check your email.", "error");
+
     }
+
 }
 
 // Phase 3: Final Step - Save to MongoDB
