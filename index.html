@@ -33,8 +33,8 @@
                     <form onsubmit="handleLogin(event)" class="space-y-4">
                         <input type="text" id="loginUser" placeholder="Username" required class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-blue-500 transition text-white">
                         <div class="relative">
-                            <input type="password" id="regPass" placeholder="Verify OTP to unlock" disabled 
-                               class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-white outline-none opacity-50 cursor-not-allowed">
+                            <input type="password" id="loginPass" placeholder="Enter Password" 
+                                   class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-white outline-none">
                             <button type="button" onclick="togglePasswordVisibility('loginPass', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition">
                                 <i class="fa-solid fa-eye"></i>
                             </button>
@@ -74,7 +74,7 @@
         </div>
     </div>
 
-    <button type="submit" id="sendOtpBtn" class="w-full bg-blue-600 py-4 rounded-xl font-bold hover:bg-blue-500 transition shadow-lg shadow-blue-600/20">
+    <button type="submit" id="initialSendOtpBtn" class="w-full bg-blue-600 py-4 rounded-xl font-bold hover:bg-blue-500 transition shadow-lg shadow-blue-600/20">
         SEND OTP
     </button>
 
@@ -86,8 +86,11 @@
         <input type="text" id="otpInput" maxlength="6" placeholder="0 0 0 0 0 0" class="w-full bg-white/5 border-2 border-blue-500/30 p-4 rounded-xl text-center text-2xl font-black tracking-[0.5em] outline-none focus:border-blue-500 transition text-white">
         
         <button onclick="verifyAndRegister()" class="w-full bg-blue-600 py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-900/20 hover:scale-[1.02] transition">
-    VERIFY & REGISTER
-</button>
+            VERIFY & REGISTER
+        </button>
+        <button id="sendOtpBtn" onclick="resendOtp()" class="w-full text-blue-500 font-bold text-sm mt-2">
+            Retry Sending
+        </button>
         
         <!-- <div id="timerContainer" class="text-center text-[10px] font-bold text-slate-600 uppercase tracking-widest">
             Resend code in <span id="timerText" class="text-blue-500">30</span>s
@@ -128,6 +131,4 @@
         });
     </script>
 </body>
-
-
 </html>
