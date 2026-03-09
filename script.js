@@ -972,10 +972,10 @@ async function verifyAndRegister() {
         // 5. Transform "Resend" button into "Continue"
         if (resendBtn) {
             resendBtn.disabled = false; // Make sure it's clickable
-            resendBtn.innerText = "Continue";
+            resendBtn.innerText = "CLICK TO LOGIN";
             resendBtn.onclick = finalizeAccountCreation; // Link to the final step
-            resendBtn.style.background = "#10b981"; // Emerald Green
-            resendBtn.style.color = "white";
+            // resendBtn.style.background = "#10b981"; // Emerald Green
+            resendBtn.style.color = "#10b981";
             resendBtn.style.opacity = "1";
         }
     } else {
