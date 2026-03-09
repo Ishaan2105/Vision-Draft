@@ -968,15 +968,6 @@ async function verifyAndRegister() {
         verifyBtn.style.opacity = "0.6";
         verifyBtn.style.cursor = "not-allowed";
 
-        // 5. Transform "Resend" button into "Continue"
-        if (resendBtn) {
-            resendBtn.disabled = false; // Make sure it's clickable
-            resendBtn.innerText = "Continue";
-            resendBtn.onclick = finalizeAccountCreation; // Link to the final step
-            resendBtn.style.background = "#10b981"; // Emerald Green
-            resendBtn.style.color = "white";
-            resendBtn.style.opacity = "1";
-        }
     } else {
         showToast("Invalid OTP. Please check your email.", "error");
     }
@@ -993,11 +984,13 @@ async function finalizeAccountCreation() {
         return showToast("Please set a password (min 6 chars)", "error");
     }
 
+    // Identify the button to update its state
+    const actionBtn = document.getElementById('sendOtpBtn');
+
     try {
         // Show loading state on the button
-        const continueBtn = document.getElementById('sendOtpBtn');
-        continueBtn.innerText = "CREATING ACCOUNT...";
-        continueBtn.disabled = true;
+        actionBtn.innerText = "CREATING ACCOUNT...";
+        actionBtn.disabled = true;
 
         const response = await fetch('https://vision-draft.onrender.com/api/register', {
             method: 'POST',
@@ -1008,12 +1001,16 @@ async function finalizeAccountCreation() {
         const data = await response.json();
 
         if (response.ok) {
-            // ONLY SHOW THIS after the database confirms success
+            // 1. Show the success toast
             showToast("Registration successful!", "success");
 
+            // 2. Update button to green and change text as requested
+            actionBtn.innerText = "YOU CAN LOGIN NOW";
+            actionBtn.style.background = "#10b981"; // Emerald Green
+            actionBtn.style.color = "white";
+
+            // 3. Delay the transition so the user can see the green button
             setTimeout(() => {
-                // Smooth transition to Login Section
-                // Ensure these IDs match your HTML (e.g., signupSection or registerSection)
                 const signup = document.getElementById('signupSection') || document.getElementById('registerSection');
                 const login = document.getElementById('loginSection');
 
@@ -1023,15 +1020,17 @@ async function finalizeAccountCreation() {
                 } else {
                     location.reload(); 
                 }
-            }, 2000);
+            }, 2500); // Slightly longer delay to ensure they read the button
         } else {
             showToast(data.message || "Registration failed", "error");
-            continueBtn.innerText = "Continue";
-            continueBtn.disabled = false;
+            actionBtn.innerText = "Continue";
+            actionBtn.disabled = false;
         }
     } catch (err) {
         console.error("Final registration error:", err);
         showToast("Server error. Please try again.", "error");
+        actionBtn.innerText = "Continue";
+        actionBtn.disabled = false;
     }
 }
 
