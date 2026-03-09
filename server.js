@@ -1,38 +1,32 @@
 // ==========================================
 // Vision Draft Backend - Unified Server
 // ==========================================
-
-require('dotenv').config();  
+require('dotenv').config(); // 1. Load your .env secrets first
 const express = require('express');
+const nodemailer = require('nodemailer');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const path = require('path');
-const { google } = require('googleapis');
-const app = express();
-const PORT = process.env.PORT || 10000;
 
-// ==========================================
-// MIDDLEWARE
-// ==========================================
+const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dashboard.html'));
-});
+// app.get('/', (req, res) => {
+//     res.send("🚀 Vision Draft API is online! Use the frontend dashboard to generate art.");
+// });
 
 // ==========================================
-// 1. MongoDB Connection
+// 1. MongoDB Connection & Models
 // ==========================================
-mongoose.connect(process.env.MONGO_URI)
+const MONGO_URI = process.env.MONGO_URI; 
+
+mongoose.connect(MONGO_URI)
     .then(() => console.log("✅ Connected to MongoDB Atlas"))
     .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
+// History Schema (Art Gallery)
 const History = mongoose.model('History', new mongoose.Schema({
     username: { type: String, required: true },
     prompt: { type: String, required: true },
@@ -41,120 +35,78 @@ const History = mongoose.model('History', new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 }));
 
+// User Schema (Keep this for future Login features)
 const User = mongoose.model('User', new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: false }, 
+    password: { type: String, required: true }, 
     createdAt: { type: Date, default: Date.now }
 }));
 
 // ==========================================
-// 2. Unified Gmail API Helper
+// 2. Unified Email Transporter
 // ==========================================
-const oauth2Client = new google.auth.OAuth2(
-    process.env.CLIENT_ID,
-    process.env.CLIENT_SECRET,
-    "https://developers.google.com/oauthplayground"
-);
-
-oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
-
-/**
- * Sends an email using the Gmail API (Port 443 - Bypasses Render Firewalls)
- */
-const sendGmail = async (to, subject, bodyContent) => {
-    try {
-        const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-        const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
-        const messageParts = [
-            `From: Vision Draft <${process.env.EMAIL_USER}>`,
-            `To: ${to}`,
-            'Content-Type: text/html; charset=utf-8',
-            'MIME-Version: 1.0',
-            `Subject: ${utf8Subject}`,
-            '',
-            bodyContent,
-        ];
-        const message = messageParts.join('\n');
-
-        const encodedMessage = Buffer.from(message)
-            .toString('base64')
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-
-        await gmail.users.messages.send({
-            userId: 'me',
-            requestBody: { raw: encodedMessage },
-        });
-        return true;
-    } catch (error) {
-        console.error('❌ Gmail API Error:', error.message);
-        throw error;
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
-};
+});
+
+transporter.verify((error) => {
+    if (error) {
+        console.log("❌ Email Server Error:", error);
+    } else {
+        console.log("✅ Email Server is ready");
+    }
+});
 
 // ==========================================
 // 3. Authentication & Recovery Routes
 // ==========================================
 
-// Route for Registration OTP
-app.post('/send-otp', async (req, res) => {
+// Route: Send Registration OTP
+app.post('/send-otp', (req, res) => {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).send("Email and OTP are required");
 
-    try {
-        await sendGmail(email, 'Your Vision Draft Verification Code', `Your verification code is: <b>${otp}</b>`);
-        console.log(`✅ OTP sent successfully to ${email}`);
+    const mailOptions = {
+        from: '"Vision Draft Support" <ishaanhingway@gmail.com>',
+        to: email,
+        subject: "Your Registration OTP",
+        text: `Welcome to Vision Draft! Your verification code is: ${otp}`
+    };
+
+    transporter.sendMail(mailOptions, (err) => {
+        if (err) return res.status(500).send("Failed to send OTP email.");
         res.status(200).send("OTP Sent successfully");
-    } catch (err) {
-        res.status(500).send("Failed to send OTP email.");
-    }
+    });
 });
 
-// Generic Reset Email Route
-app.post('/send-reset-email', async (req, res) => {
+// Route: Send Password Recovery Email
+app.post('/send-reset-email', (req, res) => {
     const { email, newPass } = req.body;
     if (!email || !newPass) return res.status(400).send("Email and password required");
 
-    try {
-        await sendGmail(email, 'Account Recovery - New Password', `Your new temporary password is: <b>${newPass}</b>`);
+    const mailOptions = {
+        from: '"Vision Draft Support" <ishaanhingway@gmail.com>',
+        to: email,
+        subject: 'Account Recovery - New Password',
+        text: `Your new temporary password is: ${newPass}`
+    };
+
+    transporter.sendMail(mailOptions, (error) => {
+        if (error) return res.status(500).send("Failed to send recovery email.");
         res.status(200).send("Recovery email sent");
-    } catch (error) {
-        res.status(500).send("Failed to send recovery email.");
-    }
-});
-
-// Full API Recovery Route
-app.post('/api/recover-password', async (req, res) => {
-    try {
-        const { email, newPass } = req.body;
-        const user = await User.findOneAndUpdate({ email: email }, { password: newPass });
-        if (!user) return res.status(404).json({ error: "Email not found" });
-
-        await sendGmail(email, 'Account Recovery - New Password', `Your new temporary password is: <b>${newPass}</b>`);
-        console.log(`✅ Recovery email sent to ${email}`);
-        res.status(200).json({ message: "Recovery email sent" });
-    } catch (err) {
-        res.status(500).json({ error: "Server recovery error" });
-    }
+    });
 });
 
 // ==========================================
-// 4. API Routes (History & User Management)
+// 4. MongoDB Art Gallery Routes
 // ==========================================
 
-// --- ADMIN ROUTE ---
-// Access this at: https://vision-draft.onrender.com/api/admin/all-users
-app.get('/api/admin/all-users', async (req, res) => {
-    try {
-        const users = await User.find({}, 'username email createdAt'); // Password hidden for security
-        res.json(users);
-    } catch (err) {
-        res.status(500).json({ error: "Error fetching user list" });
-    }
-});
-
+// Route to Save Art to the Database
 app.post('/api/save-art', async (req, res) => {
     try {
         const { username, prompt, url, size } = req.body;
@@ -166,6 +118,7 @@ app.post('/api/save-art', async (req, res) => {
     }
 });
 
+// Route to Load a Specific User's History
 app.get('/api/history/:username', async (req, res) => {
     try {
         const art = await History.find({ username: req.params.username }).sort({ createdAt: -1 });
@@ -175,6 +128,7 @@ app.get('/api/history/:username', async (req, res) => {
     }
 });
 
+// Route to delete art by its unique MongoDB ID
 app.delete('/api/delete-art/:id', async (req, res) => {
     try {
         await History.findByIdAndDelete(req.params.id);
@@ -184,34 +138,63 @@ app.delete('/api/delete-art/:id', async (req, res) => {
     }
 });
 
+// Route: Permanently delete ALL art for a specific user
+// Make sure this path matches exactly what is in script.js
 app.delete('/api/clear-history/:username', async (req, res) => {
     try {
         const { username } = req.params;
-        await History.deleteMany({ username: username }); 
+        // This command wipes every image linked to this specific user
+        const result = await History.deleteMany({ username: username }); 
+        
+        console.log(`Deleted ${result.deletedCount} items for ${username}`);
         res.status(200).json({ message: "History cleared successfully" });
     } catch (err) {
+        console.error("Database Error:", err);
         res.status(500).json({ error: "Failed to clear history" });
     }
 });
 
+// ==========================================
+// 5. Start the Server
+// ==========================================
+app.listen(PORT, () => {
+    console.log(`
+🚀 Vision Draft Backend is Active!
+📍 Local URL: http://localhost:${PORT}
+📧 Linked to: ishaanhingway@gmail.com
+    `);
+});
+
+// DELETE ACCOUNT
+// Route: Permanently delete a USER and ALL their art
+// Route: Secure Cloud Account Wipe
 app.delete('/api/delete-account/:username', async (req, res) => {
     try {
         const { username } = req.params;
         const { password } = req.body;
-        const user = await User.findOne({ username, password });
+
+        // Verify password first
+        const user = await User.findOne({ username: username, password: password });
         if (!user) return res.status(401).json({ message: "Incorrect password" });
-        await History.deleteMany({ username });
-        await User.deleteOne({ username });
+
+        // Wipe History and User from MongoDB
+        await History.deleteMany({ username: username });
+        await User.deleteOne({ username: username });
+
+        console.log(`🗑️ Full wipe completed for: ${username}`);
         res.status(200).json({ message: "Account deleted successfully" });
     } catch (err) {
         res.status(500).json({ error: "Failed to delete account" });
     }
 });
 
+// Route: Global Login Check
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        const user = await User.findOne({ username, password });
+        // Find user in MongoDB
+        const user = await User.findOne({ username: username, password: password });
+        
         if (user) {
             res.status(200).json({ success: true, user: user.username });
         } else {
@@ -222,61 +205,20 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-/* =====================================================
-    📝 USER REGISTRATION ROUTE (Email Guard Version)
-===================================================== */
 
-/* =====================================================
-    📝 USER REGISTRATION ROUTE (Email Guard Version)
-===================================================== */
+// Route: Register new user to MongoDB
 app.post('/api/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
-
-        // 1. Basic Validation
-        if (!username || !email) {
-            return res.status(400).json({ message: "Username and email are required." });
-        }
-
-        const lowerEmail = email.toLowerCase();
-
-        // 2. Check for existing Email
-        const existingEmail = await User.findOne({ email: lowerEmail });
-        if (existingEmail) {
-            return res.status(400).json({ message: "Email already used" });
-        }
-
-        // 3. Check for existing Username
-        const existingUser = await User.findOne({ username: username });
-        if (existingUser) {
-            return res.status(400).json({ message: "Username already taken" });
-        }
-
-        // 4. Create and Save New User
-        const newUser = new User({
-            username,
-            email: lowerEmail,
-            password: password || "" // ✅ Fixed: Added empty string fallback
-        });
-
-        await newUser.save();
-
-        // 5. Success Response
-        console.log(`✅ Registration Successful: ${username} (${lowerEmail})`);
-        res.status(201).json({ message: "Registration successful! You can now login." });
-
-    } catch (error) {
-        console.error("❌ REGISTRATION CRASH:", error);
-        
-        if (error.code === 11000) {
-            return res.status(400).json({ message: "Email or Username already exists." });
-        }
-
-        res.status(500).json({ message: "Internal Server Error. Please try again later." });
+        const newUser = new User({ username, email, password });
+        await newUser.save(); 
+        res.status(201).json({ success: true, message: "User registered in cloud" });
+    } catch (err) {
+        res.status(500).json({ error: "Registration failed (Username/Email might exist)" });
     }
 });
 
-
+// Route: Update Password in MongoDB
 app.post('/api/update-password', async (req, res) => {
     try {
         const { username, currentPassword, newPassword } = req.body;
@@ -295,18 +237,28 @@ app.post('/api/update-password', async (req, res) => {
     }
 });
 
-// ==========================================
-// 5. Start the Server
-// ==========================================
-app.listen(PORT, () => {
-    console.log(`🚀 Vision Draft Backend Active on Port ${PORT}`);
+// Route: Cloud-based Password Recovery
+app.post('/api/recover-password', async (req, res) => {
+    try {
+        const { email, newPass } = req.body;
+        
+        // Update user in MongoDB
+        const user = await User.findOneAndUpdate({ email: email }, { password: newPass });
+
+        if (!user) return res.status(404).json({ error: "Email not found in database" });
+
+        const mailOptions = {
+            from: '"Vision Draft Support" <ishaanhingway@gmail.com>',
+            to: email,
+            subject: 'Account Recovery - New Password',
+            text: `Your new temporary password for ${user.username} is: ${newPass}`
+        };
+
+        transporter.sendMail(mailOptions, (error) => {
+            if (error) return res.status(500).json({ error: "Failed to send email" });
+            res.status(200).json({ message: "Cloud updated and email sent" });
+        });
+    } catch (err) {
+        res.status(500).json({ error: "Server recovery error" });
+    }
 });
-
-module.exports = app;
-
-
-
-
-
-
-
