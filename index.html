@@ -80,17 +80,17 @@
     <div id="otpSection" class="hidden space-y-4 border-t border-white/5 pt-6">
         <div class="text-center space-y-2">
             <p class="text-sm font-bold text-blue-400 uppercase tracking-widest">Verify Email</p>
-            <p class="text-[10px] text-slate-500">A 5-digit code was sent to your email.</p>
+            <p class="text-[10px] text-slate-500">A 6-digit code was sent to your email.</p>
         </div>
-        <input type="text" id="otpInput" maxlength="5" placeholder="0 0 0 0 0" class="w-full bg-white/5 border-2 border-blue-500/30 p-4 rounded-xl text-center text-2xl font-black tracking-[0.5em] outline-none focus:border-blue-500 transition text-white">
+        <input type="text" id="otpInput" maxlength="6" placeholder="0 0 0 0 0 0" class="w-full bg-white/5 border-2 border-blue-500/30 p-4 rounded-xl text-center text-2xl font-black tracking-[0.5em] outline-none focus:border-blue-500 transition text-white">
         
-        <button type="button" onclick="verifyAndRegister(event)" class="w-full bg-green-600 py-4 rounded-xl font-bold">
-    VERIFY OTP
+        <button type="button" onclick="verifyAndRegister()" class="w-full bg-green-600 py-4 rounded-xl font-bold hover:bg-green-500 transition shadow-lg shadow-green-600/20">
+    VERIFY & REGISTER
 </button>
         
-        <div id="timerContainer" class="text-center text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+        <!-- <div id="timerContainer" class="text-center text-[10px] font-bold text-slate-600 uppercase tracking-widest">
             Resend code in <span id="timerText" class="text-blue-500">30</span>s
-        </div>
+        </div> -->
     </div>
 </form>
 
