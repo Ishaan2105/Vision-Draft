@@ -44,7 +44,7 @@ const History = mongoose.model('History', new mongoose.Schema({
 const User = mongoose.model('User', new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, 
+    password: { type: String, required: false }, 
     createdAt: { type: Date, default: Date.now }
 }));
 
@@ -226,25 +226,27 @@ app.post('/api/login', async (req, res) => {
     📝 USER REGISTRATION ROUTE (Email Guard Version)
 ===================================================== */
 
+/* =====================================================
+    📝 USER REGISTRATION ROUTE (Email Guard Version)
+===================================================== */
 app.post('/api/register', async (req, res) => {
     try {
-        const { username, email } = req.body;
+        const { username, email, password } = req.body;
 
         // 1. Basic Validation
-        if (!username || !email ) {
-            return res.status(400).json({ message: "All fields are required." });
+        if (!username || !email) {
+            return res.status(400).json({ message: "Username and email are required." });
         }
 
         const lowerEmail = email.toLowerCase();
 
-        // 2. Check specifically for existing Email
+        // 2. Check for existing Email
         const existingEmail = await User.findOne({ email: lowerEmail });
         if (existingEmail) {
-            // This message will trigger your "email already used" popup
             return res.status(400).json({ message: "Email already used" });
         }
 
-        // 3. Check specifically for existing Username
+        // 3. Check for existing Username
         const existingUser = await User.findOne({ username: username });
         if (existingUser) {
             return res.status(400).json({ message: "Username already taken" });
@@ -254,7 +256,7 @@ app.post('/api/register', async (req, res) => {
         const newUser = new User({
             username,
             email: lowerEmail,
-            password // Suggestion: use bcrypt.hash later for security
+            password: password || "" // ✅ Fixed: Added empty string fallback
         });
 
         await newUser.save();
@@ -266,7 +268,6 @@ app.post('/api/register', async (req, res) => {
     } catch (error) {
         console.error("❌ REGISTRATION CRASH:", error);
         
-        // Final safety net for MongoDB unique indexing errors
         if (error.code === 11000) {
             return res.status(400).json({ message: "Email or Username already exists." });
         }
@@ -274,6 +275,7 @@ app.post('/api/register', async (req, res) => {
         res.status(500).json({ message: "Internal Server Error. Please try again later." });
     }
 });
+
 
 app.post('/api/update-password', async (req, res) => {
     try {
@@ -301,6 +303,7 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 
 
 
