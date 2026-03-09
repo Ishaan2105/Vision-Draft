@@ -938,47 +938,81 @@ async function handleInitialSignup(e) {
 /* =====================================================
     🏁 FINAL REGISTRATION & VERIFICATION
 ===================================================== */
-async function verifyAndRegister() {
+
+async function finalizeRegistration() {
     const username = document.getElementById('regUser').value.trim();
     const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPass').value.trim();
-    const enteredOtp = document.getElementById('otpInput').value.trim();
 
-    // 1. Basic Validation
-    if (!enteredOtp) return showToast("Please enter the OTP", "error");
-    if (enteredOtp !== generatedOtp) return showToast("Invalid OTP. Check your mail.", "error");
+    if (!password || password.length < 6) {
+        return showToast("Please enter a password (min 6 chars)", "error");
+    }
 
     try {
-        // 2. Send Registration Data to Backend
         const response = await fetch('https://vision-draft.onrender.com/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username: username,
-                email: email,
-                password: password
-            })
+            body: JSON.stringify({ username, email, password })
         });
 
         const data = await response.json();
 
         if (response.ok) {
-            // SUCCESS
+            // SUCCESS: Only now show the "Registration successful" popup
             showToast("Registration Successful!", "success");
             
-            // Optional: Automatically log them in or redirect
             setTimeout(() => {
-                location.reload(); // Refresh to show login state
+                // Take him to login page
+                const registerSection = document.getElementById('registerSection');
+                const loginSection = document.getElementById('loginSection');
+                if (registerSection && loginSection) {
+                    registerSection.classList.add('hidden');
+                    loginSection.classList.remove('hidden');
+                } else {
+                    location.reload(); // Fallback
+                }
             }, 2000);
         } else {
-            // ERROR: This catches "Email already used" or "Username taken"
-            // It uses the exact message sent by your server.js
             showToast(data.message || "Registration failed", "error");
         }
-
     } catch (err) {
-        console.error("Registration Error:", err);
+        console.error("Finalize Error:", err);
         showToast("Connection lost. Try again.", "error");
+    }
+}
+
+
+async function verifyAndRegister() {
+    const enteredOtp = document.getElementById('otpInput').value.trim();
+    const passwordField = document.getElementById('regPass');
+    const verifyBtn = document.querySelector('button[onclick="verifyAndRegister()"]');
+    const retryBtn = document.querySelector('button[onclick="resendOtp()"]');
+
+    if (!enteredOtp) return showToast("Please enter the OTP", "error");
+
+    // Check if OTP matches
+    if (enteredOtp === generatedOtp) {
+        isOtpVerified = true;
+        showToast("OTP Verified! Please set your password.", "success");
+
+        // 1. Unlock the password field
+        passwordField.disabled = false;
+        passwordField.classList.remove('opacity-50', 'cursor-not-allowed');
+        passwordField.focus();
+
+        // 2. Make Verify button unclickable
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = "Verified ✅";
+        verifyBtn.classList.add('opacity-70', 'cursor-not-allowed');
+
+        // 3. Change "Retry Sending" to "Continue"
+        if (retryBtn) {
+            retryBtn.innerText = "Continue";
+            retryBtn.onclick = finalizeRegistration; // Point to the new function below
+            retryBtn.classList.add('bg-emerald-600', 'text-white'); // Make it look like a "next" button
+        }
+    } else {
+        showToast("Invalid OTP. Check your mail.", "error");
     }
 }
 
