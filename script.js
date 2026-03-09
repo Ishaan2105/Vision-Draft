@@ -983,63 +983,74 @@ async function finalizeRegistration() {
 
 
 async function verifyAndRegister() {
-    const enteredOtp = document.getElementById('otpInput').value.trim();
+    const otpInput = document.getElementById('otpInput');
+    const enteredOtp = otpInput.value.trim();
     const passwordField = document.getElementById('regPass');
     const verifyBtn = document.querySelector('button[onclick="verifyAndRegister()"]');
-    const retryBtn = document.querySelector('button[onclick="resendOtp()"]');
+    const retryBtn = document.getElementById('resendOtpBtn'); // Ensure this ID exists in HTML
 
-    if (!enteredOtp) return showToast("Please enter the OTP", "error");
-
-    // Check if OTP matches
     if (enteredOtp === generatedOtp) {
-        isOtpVerified = true;
-        showToast("OTP Verified! Please set your password.", "success");
+        // 1. Success message for OTP only
+        showToast("OTP Verified! Now set your password.", "success");
 
-        // 1. Unlock the password field
+        // 2. Unlock the password field
         passwordField.disabled = false;
         passwordField.classList.remove('opacity-50', 'cursor-not-allowed');
+        passwordField.placeholder = "Now enter your password";
         passwordField.focus();
 
-        // 2. Make Verify button unclickable
+        // 3. Make Verify button unclickable
         verifyBtn.disabled = true;
-        verifyBtn.innerHTML = "Verified ✅";
-        verifyBtn.classList.add('opacity-70', 'cursor-not-allowed');
+        verifyBtn.innerText = "Verified ✅";
+        verifyBtn.style.opacity = "0.6";
+        verifyBtn.style.cursor = "not-allowed";
 
-        // 3. Change "Retry Sending" to "Continue"
+        // 4. Transform "Retry Sending" button to "Continue"
         if (retryBtn) {
             retryBtn.innerText = "Continue";
-            retryBtn.onclick = finalizeRegistration; // Point to the new function below
-            retryBtn.classList.add('bg-emerald-600', 'text-white'); // Make it look like a "next" button
+            retryBtn.onclick = finalizeAccountCreation; // Switch to the second step
+            retryBtn.style.background = "#10b981"; // Emerald green color
+            retryBtn.style.color = "white";
         }
     } else {
-        showToast("Invalid OTP. Check your mail.", "error");
+        showToast("Invalid OTP. Please check your email.", "error");
     }
 }
 
 // Phase 3: Save to MongoDB
-async function finalizeAccountCreation(e) {
-    if (e) e.preventDefault();
-    const user = document.getElementById('regUser').value.trim();
+async function finalizeAccountCreation() {
+    const username = document.getElementById('regUser').value.trim();
     const email = document.getElementById('regEmail').value.trim();
-    const pass = document.getElementById('regPass').value;
+    const password = document.getElementById('regPass').value.trim();
 
-    if (pass.length < 4) return showToast("Password too short!", "error");
+    if (!password || password.length < 6) {
+        return showToast("Please set a password (at least 6 characters)", "error");
+    }
 
     try {
         const response = await fetch('https://vision-draft.onrender.com/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user, email: email, password: pass })
+            body: JSON.stringify({ username, email, password })
         });
 
+        const data = await response.json();
+
         if (response.ok) {
-            showToast("Account Created!", "success");
-            setTimeout(() => window.location.reload(), 1500);
+            // ONLY NOW do we show this popup
+            showToast("Registration successful!", "success");
+
+            setTimeout(() => {
+                // Switch to login view
+                document.getElementById('registerSection').classList.add('hidden');
+                document.getElementById('loginSection').classList.remove('hidden');
+            }, 2000);
         } else {
-            showToast("User/Email already exists", "error");
+            showToast(data.message || "Registration failed", "error");
         }
     } catch (err) {
-        showToast("Cloud connection error", "error");
+        console.error("Final registration error:", err);
+        showToast("Server error. Please try again.", "error");
     }
 }
 
