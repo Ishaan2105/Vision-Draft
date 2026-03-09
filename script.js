@@ -1,7 +1,7 @@
 let generatedOtp = null;
 let countdown;
 let imageToDeleteId = null;
-
+let countdownInterval;
 
 /* =====================================================
     🌍 COUNTRY LIST
@@ -105,35 +105,47 @@ function expandPrompt() {
  * Replaces the old LocalStorage-based handleSignup.
  */
 async function handleSignup(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
+  
   const user = document.getElementById('regUser').value.trim();
   const email = document.getElementById('regEmail').value.trim();
+  const sendBtn = document.getElementById('sendOtpBtn');
 
-  // 1. Basic validation
   if (!user || !email) return showToast("Username and Email required", "error");
 
-  // 2. Generate OTP for cloud verification
-  generatedOtp = Math.floor(10000 + Math.random() * 90000).toString();
+  // UI Feedback
+  sendBtn.disabled = true;
+  sendBtn.innerText = "SENDING...";
 
-  // 3. UI logic to show OTP section
-  document.getElementById('otpSection').classList.remove('hidden');
-  document.getElementById('sendOtpBtn').classList.add('hidden');
-  startOtpTimer();
+  // 6-Digit Generation
+  generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // 4. Send request to your Node.js server to trigger the email
   try {
-    const response = await fetch('http://localhost:3000/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, otp: generatedOtp })
+    const response = await fetch('https://vision-draft.onrender.com/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, otp: generatedOtp })
     });
-    
+
     if (response.ok) {
-        showToast("Verification email sent!", "success");
+      showToast("Verification email sent!", "success");
+      
+      const otpSection = document.getElementById('otpSection');
+      if (otpSection) otpSection.classList.remove('hidden');
+      
+      sendBtn.classList.add('hidden'); // Hide button so they can't spam it
+      
+      return; // CRITICAL: Stop here so it doesn't hit the catch block
     }
+    
+    throw new Error("Server rejected request");
+
   } catch (err) {
-    showToast("Server offline - check console for OTP", "error");
-    console.log("Dev OTP:", generatedOtp);
+    console.error("OTP Error:", err);
+    showToast("Email failed. Try again.", "error");
+    
+    sendBtn.disabled = false;
+    sendBtn.innerText = "RETRY SENDING";
   }
 }
 
@@ -171,7 +183,7 @@ async function handleRecoverySend() {
 
     try {
         // 2. Tell the cloud server to update MongoDB and send the email
-        const res = await fetch('http://localhost:3000/api/recover-password', {
+        const res = await fetch('https://vision-draft.onrender.com/api/recover-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, newPass })
@@ -243,7 +255,7 @@ async function generateImage() {
 
         // 1. SAVE TO MONGODB
         try {
-            await fetch('http://localhost:3000/api/save-art', {
+            await fetch('https://vision-draft.onrender.com/api/save-art', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -311,7 +323,7 @@ async function renderSidebar() {
     const user = localStorage.getItem('visiondraft_currentUser');
     
     try {
-        const response = await fetch(`http://localhost:3000/api/history/${user}`);
+        const response = await fetch(`https://vision-draft.onrender.com/api/history/${user}`);
         const history = await response.json();
         
         sb.innerHTML = history.map(h => `
@@ -357,7 +369,7 @@ async function submitChangePass() {
     if (newP !== confirmP) return showToast("Passwords don't match", "error");
 
     try {
-        const response = await fetch('http://localhost:3000/api/update-password', {
+        const response = await fetch('https://vision-draft.onrender.com/api/update-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -393,7 +405,7 @@ async function submitDeleteAccount() {
 
     try {
         // 2. Send request to backend with password for cloud verification
-        const response = await fetch(`http://localhost:3000/api/delete-account/${userToDelete}`, {
+        const response = await fetch(`https://vision-draft.onrender.com/api/delete-account/${userToDelete}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password: passToConfirm })
@@ -427,7 +439,7 @@ async function downloadHistoryArchive() {
 
     try {
         // 1. Fetch data from MongoDB
-        const response = await fetch(`http://localhost:3000/api/history/${user}`);
+        const response = await fetch(`https://vision-draft.onrender.com/api/history/${user}`);
         const historyData = await response.json();
 
         if (!historyData || historyData.length === 0) {
@@ -540,7 +552,7 @@ async function handleLogin(e) {
     const pass = document.getElementById('loginPass').value;
 
     try {
-        const response = await fetch('http://localhost:3000/api/login', {
+        const response = await fetch('https://vision-draft.onrender.com/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: user, password: pass })
@@ -608,7 +620,7 @@ async function renderGallery() {
 
     try {
         // Fetch history from your MongoDB via the backend
-        const response = await fetch(`http://localhost:3000/api/history/${user}`);
+        const response = await fetch(`https://vision-draft.onrender.com/api/history/${user}`);
         const history = await response.json();
 
         if (history.length === 0) {
@@ -627,15 +639,51 @@ async function renderGallery() {
                     
                     <div class="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 p-6 flex flex-col justify-end transition-all">
                         <p class="text-[10px] text-white line-clamp-2 mb-4">${safePrompt}</p>
-                        <div class="grid grid-cols-2 gap-2" onclick="event.stopPropagation()">
-                            <button onclick="downloadImg('${h.url}', 'VisionDraft')" class="bg-blue-600 py-2 text-[10px] font-bold rounded-lg text-white">DOWNLOAD</button>
-                            <button onclick="deleteImg('${h._id}')" class="bg-white/10 hover:bg-red-600 py-2 text-[10px] font-bold rounded-lg text-white">DELETE</button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="event.stopPropagation(); downloadImg('${h.url}', 'VisionDraft')" 
+                                    class="bg-blue-600 py-2 text-[10px] font-bold rounded-lg text-white">
+                                DOWNLOAD
+                            </button>
+                            <button onclick="event.stopPropagation(); deleteImg('${h._id}')" 
+                                    class="bg-white/10 hover:bg-red-600 py-2 text-[10px] font-bold rounded-lg text-white">
+                                DELETE
+                            </button>
                         </div>
                     </div>
                 </div>`;
         }).join('');
     } catch (err) {
         console.error("Cloud Fetch Error:", err);
+    }
+}
+
+
+// 1. Trigger the confirmation modal
+function deleteImg(id) {
+    imageToDeleteId = id; // Store the ID for the confirm button to use
+    const modal = document.getElementById('deleteConfirmModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+}
+
+// 2. The final deletion logic (Should be wired to your modal's confirm button)
+async function confirmSingleDelete() {
+    if (!imageToDeleteId) return;
+    try {
+        const response = await fetch(`https://vision-draft.onrender.com/api/delete-art/${imageToDeleteId}`, {
+            method: 'DELETE'
+        });
+        if (response.ok) {
+            showToast("Art removed from cloud", "success");
+            renderGallery(); // Refresh the grid
+            renderSidebar(); // Refresh the list
+        }
+    } catch (err) {
+        showToast("Connection error", "error");
+    } finally {
+        closeDeleteModal();
     }
 }
 
@@ -746,7 +794,7 @@ async function confirmClearHistory() {
 
     try {
         // 2. Request the backend to clear the specific user's collection
-        const response = await fetch(`http://localhost:3000/api/clear-history/${user}`, {
+        const response = await fetch(`https://vision-draft.onrender.com/api/clear-history/${user}`, {
             method: 'DELETE'
         });
 
@@ -801,275 +849,165 @@ function isValidPhone(phone) {
 
 
 function startResendTimer() {
-    let timeLeft = 10;
-    const resendBtn = document.getElementById('resendBtn');
-    const timerText = document.getElementById('timerText');
+    let timeLeft = 30; // 30 seconds
+    const sendBtn = document.getElementById('sendOtpBtn');
+    
+    if (!sendBtn) return;
 
-    resendBtn.disabled = true;
-    countdown = setInterval(() => {
-        timerText.innerText = `(in ${timeLeft}s)`;
-        timeLeft--;
+    clearInterval(countdownInterval); // Clear any old timers
+    sendBtn.disabled = true; // Lock the button
 
-        if (timeLeft < 0) {
-            clearInterval(countdown);
-            resendBtn.disabled = false;
-            timerText.innerText = "";
+    countdownInterval = setInterval(() => {
+        if (timeLeft <= 0) {
+            clearInterval(countdownInterval);
+            sendBtn.disabled = false; // 1. Make it clickable again
+            sendBtn.innerText = "RESEND OTP"; // 2. Change text to Resend
+            
+            // 3. Ensure clicking it now calls the signup function again
+            sendBtn.onclick = (e) => handleInitialSignup(e); 
+        } else {
+            sendBtn.innerText = `Resend in ${timeLeft}`;
+            timeLeft--;
         }
     }, 1000);
 }
 
 
-
-
 /* =====================================================
-register the OTP verification and final registration logic
+    🔐 FOOLPROOF REGISTRATION FLOW
 ===================================================== */
-function verifyAndRegister(e) {
-    if (e) e.preventDefault(); // Prevents the form from re-submitting
 
-    const enteredOtp = document.getElementById('otpInput').value;
-    const passField = document.getElementById('regPass');
-    const checkmark = document.getElementById('emailSuccessCheck');
-    const emailInput = document.getElementById('regEmail');
-
-    if (enteredOtp === generatedOtp) {
-        showToast("Email Verified! Set your password.", "success");
-
-        // 1. Visual confirmation
-        if (checkmark) {
-            checkmark.classList.remove('opacity-0', 'scale-50');
-            checkmark.classList.add('opacity-100', 'scale-110');
-            emailInput.style.borderColor = "#10b981";
-        }
-
-        // 2. Unlock password
-        passField.disabled = false;
-        passField.classList.remove('opacity-50', 'cursor-not-allowed');
-        passField.focus();
-
-        // 3. Hide OTP UI and change button purpose
-        document.getElementById('otpSection').classList.add('hidden');
-        const mainBtn = document.getElementById('sendOtpBtn');
-        mainBtn.classList.remove('hidden');
-        mainBtn.innerText = "FINALIZE REGISTRATION";
-        mainBtn.style.backgroundColor = "#10b981"; 
-        
-        // CRITICAL: Change the onclick so it doesn't send another OTP
-        mainBtn.onclick = finalizeAccountCreation; 
-    } else {
-        showToast("Invalid OTP. Please try again.", "error");
-    }
-}
-
-// 4. New function to actually save the account
-async function finalizeAccountCreation(e) {
-    if (e) e.preventDefault();
-    const user = document.getElementById('regUser').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const pass = document.getElementById('regPass').value;
-
-    try {
-        // Sends registration data directly to MongoDB
-        const response = await fetch('http://localhost:3000/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user, email: email, password: pass })
-        });
-
-        if (response.ok) {
-            // Note: We no longer save to 'visiondraft_users' LocalStorage
-            showToast("Studio Created in Cloud!", "success");
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showToast("Registration failed. Username or Email may exist.", "error");
-        }
-    } catch (err) {
-        showToast("Server offline - Cannot create account", "error");
-    }
-}
-
-
-
+// Phase 1: Send OTP
 async function handleInitialSignup(e) {
     if (e) e.preventDefault();
     
-    const email = document.getElementById('regEmail').value;
-    const user = document.getElementById('regUser').value;
+    const email = document.getElementById('regEmail').value.trim();
+    const user = document.getElementById('regUser').value.trim();
+    const sendBtn = document.getElementById('sendOtpBtn');
 
     if (!email || !user) return showToast("Enter Username and Email", "error");
 
-    // 1. Generate OTP
-    generatedOtp = Math.floor(10000 + Math.random() * 90000).toString();
-    // console.log("Your VisionDraft OTP: " + generatedOtp);
+    sendBtn.disabled = true;
+    sendBtn.innerText = "SENDING...";
 
-    // 2. UI Logic (Show boxes immediately)
-    document.getElementById('otpSection').classList.remove('hidden');
-    document.getElementById('sendOtpBtn').classList.add('hidden');
-    if (typeof startOtpTimer === "function") startOtpTimer();
+    generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 3. THE BRIDGE (Send to Server)
     try {
-        console.log("Attempting to connect to server..."); // Debug line
-        const response = await fetch('http://localhost:3000/send-otp', {
+        const response = await fetch('https://vision-draft.onrender.com/send-otp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email, otp: generatedOtp })
         });
         
-        const result = await response.text();
-        console.log("Server Response:", result); // Should say "OTP Sent"
-        
+        // --- LOGIC CHANGE START ---
         if (response.ok) {
-            showToast("Real email sent!", "success");
-        }
-    } catch (err) {
-        console.error("❌ CONNECTION ERROR:", err);
-        showToast("Server offline - Check console", "error");
-    }
-}
-
-function startOtpTimer() {
-    let timeLeft = 10;
-    const timerText = document.getElementById('timerText');
-    const container = document.getElementById('timerContainer');
-    const sendOtpBtn = document.getElementById('sendOtpBtn'); // Get the button
-
-    // 1. Disable the button immediately when the timer starts
-    if (sendOtpBtn) {
-        sendOtpBtn.disabled = true;
-        sendOtpBtn.classList.add('opacity-50', 'cursor-not-allowed'); // Visual feedback
-    }
-
-    const countdown = setInterval(() => {
-        timeLeft--;
-        if (timerText) timerText.innerText = timeLeft;
-
-        if (timeLeft <= 0) {
-            clearInterval(countdown);
+            showToast("OTP sent to your email!", "success");
             
-            // 2. Re-enable the button or show the Resend option
-            if (container) {
-                container.innerHTML = `<button type="button" onclick="handleInitialSignup(event)" class="text-blue-400 hover:underline cursor-pointer">RESEND OTP</button>`;
-            }
+            const otpSection = document.getElementById('otpSection');
+            if (otpSection) otpSection.classList.remove('hidden');
             
-            // Ensure the main button is usable again if needed
-            if (sendOtpBtn) {
-                sendOtpBtn.disabled = false;
-                sendOtpBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-        }
-    }, 1000);
-}
-
-/* =====================================================
-   PHASE 2: VERIFY OTP & UNLOCK PASSWORD
-===================================================== */
-function verifyAndRegister() {
-    const enteredOtp = document.getElementById('otpInput').value;
-    const passField = document.getElementById('regPass');
-    const checkmark = document.getElementById('emailSuccessCheck'); // Get the checkmark
-    const emailInput = document.getElementById('regEmail'); // Get email input
-
-    if (enteredOtp === generatedOtp) {
-        showToast("Email Verified! Set your password.", "success");
-
-        // ✅ 1. Trigger the checkmark animation and green border
-        if (checkmark) {
-            checkmark.classList.remove('opacity-0', 'scale-50');
-            checkmark.classList.add('opacity-100', 'scale-110');
-            emailInput.style.borderColor = "#10b981"; // Match Emerald Green
-        }
-
-        // 2. Unlock the password field
-        passField.disabled = false;
-        passField.classList.remove('opacity-50', 'cursor-not-allowed');
-        passField.placeholder = "Create your password now";
-        passField.focus();
-
-        // 3. Hide the OTP section
-        document.getElementById('otpSection').classList.add('hidden');
-
-        // 4. Transform the SEND OTP button into the FINALIZE button
-        const mainBtn = document.getElementById('sendOtpBtn');
-        mainBtn.classList.remove('hidden');
-        mainBtn.innerText = "FINALIZE REGISTRATION";
-        mainBtn.style.backgroundColor = "#10b981"; 
+            // Safety wrapper to prevent any timer errors from triggering the catch block
+            // try {
+            //     if (typeof startResendTimer === "function") {
+            //         startResendTimer();
+            //     }
+            // } catch (timerErr) {
+            //     console.warn("Timer failed but email was sent:", timerErr);
+            // }
+            
+            return; // EXIT HERE. Do not let it reach any error code.
+        } 
         
-        // 5. Change the function it triggers
-        mainBtn.onclick = finalizeAccountCreation;
-    } else {
-        showToast("Invalid OTP. Please try again.", "error");
+        // If we reach here, response was NOT ok
+        showToast("Server rejected request. Try again.", "error");
+
+    } catch (err) {
+        // This catch block will now ONLY show a toast if the FETCH itself fails (e.g. No Internet)
+        console.error("Network/System Error:", err);
+        showToast("Connection failed. Check your internet.", "error");
+    } finally {
+        // Always reset button state if it didn't succeed
+        if (sendBtn.innerText === "SENDING...") {
+            sendBtn.disabled = false;
+            sendBtn.innerText = "RETRY SENDING";
+        }
     }
 }
 
+// Phase 2: Verify OTP
 /* =====================================================
-   PHASE 3: FINAL ACCOUNT CREATION
+    🏁 FINAL REGISTRATION & VERIFICATION
 ===================================================== */
+async function verifyAndRegister() {
+    const username = document.getElementById('regUser').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPass').value.trim();
+    const enteredOtp = document.getElementById('otpInput').value.trim();
+
+    // 1. Basic Validation
+    if (!enteredOtp) return showToast("Please enter the OTP", "error");
+    if (enteredOtp !== generatedOtp) return showToast("Invalid OTP. Check your mail.", "error");
+
+    try {
+        // 2. Send Registration Data to Backend
+        const response = await fetch('https://vision-draft.onrender.com/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: username,
+                email: email,
+                password: password
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // SUCCESS
+            showToast("Registration Successful!", "success");
+            
+            // Optional: Automatically log them in or redirect
+            setTimeout(() => {
+                location.reload(); // Refresh to show login state
+            }, 2000);
+        } else {
+            // ERROR: This catches "Email already used" or "Username taken"
+            // It uses the exact message sent by your server.js
+            showToast(data.message || "Registration failed", "error");
+        }
+
+    } catch (err) {
+        console.error("Registration Error:", err);
+        showToast("Connection lost. Try again.", "error");
+    }
+}
+
+// Phase 3: Save to MongoDB
 async function finalizeAccountCreation(e) {
     if (e) e.preventDefault();
     const user = document.getElementById('regUser').value.trim();
     const email = document.getElementById('regEmail').value.trim();
     const pass = document.getElementById('regPass').value;
 
+    if (pass.length < 4) return showToast("Password too short!", "error");
+
     try {
-        const response = await fetch('http://localhost:3000/api/register', {
+        const response = await fetch('https://vision-draft.onrender.com/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: user, email: email, password: pass })
         });
 
         if (response.ok) {
-            // Success! No need to save to LocalStorage anymore
-            showToast("Account Created in Cloud!", "success");
+            showToast("Account Created!", "success");
             setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showToast("User/Email already exists", "error");
         }
     } catch (err) {
-        showToast("Cloud connection failed", "error");
+        showToast("Cloud connection error", "error");
     }
 }
-
-
-
-// // correct otp
-
-// if (enteredOtp === generatedOtp) {
-//     showToast("Email Verified! Set your password.", "success");
-
-//     // ✅ ADDED: Show the Success Checkmark with animation
-//     const checkmark = document.getElementById('emailSuccessCheck');
-//     if (checkmark) {
-//         checkmark.classList.remove('opacity-0', 'scale-50');
-//         checkmark.classList.add('opacity-100', 'scale-110');
-        
-//         // Change the email input border to emerald to match
-//         document.getElementById('regEmail').style.borderColor = "#10b981";
-//     }
-
-//     // ... rest of your existing unlock code ...
-//     passField.disabled = false;
-//     passField.classList.remove('opacity-50', 'cursor-not-allowed');
-// }
-
-// ccount user initials in the profile menu
-// Run this function when the page loads
-// document.addEventListener('DOMContentLoaded', () => {
-//     const currentUser = localStorage.getItem('visiondraft_currentUser');
-    
-//     if (currentUser) {
-//         // 1. Update the Initial (The circle)
-//         const initialElement = document.getElementById('userInitial');
-//         if (initialElement) {
-//             initialElement.innerText = currentUser.charAt(0).toUpperCase();
-//         }
-
-//         // 2. Update the Name Text
-//         const nameElement = document.getElementById('displayUsername');
-//         if (nameElement) {
-//             nameElement.innerText = currentUser.toLowerCase();
-//         }
-//     }
-// });
-
 
 
 // user's inital
@@ -1133,31 +1071,35 @@ function focusImage(id, prompt) {
 /**
  * The final deletion logic triggered by the Modal's RED button
  */
-document.getElementById('confirmDeleteBtn').onclick = async () => {
-    if (imageToDeleteId) {
-        try {
-            // 1. Send the command to MongoDB
-            const response = await fetch(`http://localhost:3000/api/delete-art/${imageToDeleteId}`, {
-                method: 'DELETE'
-            });
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
-            if (response.ok) {
-                // 2. CRITICAL: Re-run these to refresh the screen
-                await renderGallery(); 
-                await renderSidebar();
-                
-                showToast("Image removed from cloud", "success");
-            } else {
-                showToast("Server error: Could not delete", "error");
+if (confirmDeleteBtn) {
+    confirmDeleteBtn.onclick = async () => {
+        if (imageToDeleteId) {
+            try {
+                // 1. Send the command to MongoDB
+                const response = await fetch(`https://vision-draft.onrender.com/api/delete-art/${imageToDeleteId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    // 2. CRITICAL: Re-run these to refresh the screen
+                    await renderGallery(); 
+                    await renderSidebar();
+                    
+                    showToast("Image removed from cloud", "success");
+                } else {
+                    showToast("Server error: Could not delete", "error");
+                }
+            } catch (err) {
+                console.error("Delete failed:", err);
+                showToast("Connection lost", "error");
             }
-        } catch (err) {
-            console.error("Delete failed:", err);
-            showToast("Connection lost", "error");
+            
+            closeDeleteModal(); // Close the popup
         }
-        
-        closeDeleteModal(); // Close the popup
-    }
-};
+    };
+}
 
 /**
  * Triggered by the "CANCEL" button or after a successful delete.
