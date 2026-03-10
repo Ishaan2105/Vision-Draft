@@ -1011,9 +1011,9 @@ async function finalizeAccountCreation() {
             showToast("Registration successful!", "success");
 
             // 2. Update button to green and change text as requested
-            actionBtn.innerText = "YOU CAN LOGIN NOW";
-            actionBtn.style.background = "#10b981"; // Emerald Green
-            actionBtn.style.color = "white";
+            // actionBtn.innerText = "YOU CAN LOGIN NOW";
+            // actionBtn.style.background = "#10b981"; // Emerald Green
+            // actionBtn.style.color = "white";
 
             // 3. Delay the transition so the user can see the green button
             setTimeout(() => {
