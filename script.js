@@ -883,7 +883,7 @@ async function handleInitialSignup(e) {
     
     const email = document.getElementById('regEmail').value.trim();
     const user = document.getElementById('regUser').value.trim();
-    const sendBtn = document.getElementById('sendOtpBtn');
+    const sendBtn = document.getElementById('initialSendOtpBtn') || document.getElementById('sendOtpBtn');
 
     if (!email || !user) return showToast("Enter Username and Email", "error");
 
@@ -899,35 +899,28 @@ async function handleInitialSignup(e) {
             body: JSON.stringify({ email: email, otp: generatedOtp })
         });
         
-        // --- LOGIC CHANGE START ---
         if (response.ok) {
             showToast("OTP sent to your email!", "success");
             
+            // 1. HIDE THE BUTTON PERMANENTLY
+            // We use display none so it doesn't take up space anymore
+            sendBtn.style.display = 'none'; 
+            
+            // 2. Show the OTP entry section
             const otpSection = document.getElementById('otpSection');
             if (otpSection) otpSection.classList.remove('hidden');
             
-            // Safety wrapper to prevent any timer errors from triggering the catch block
-            // try {
-            //     if (typeof startResendTimer === "function") {
-            //         startResendTimer();
-            //     }
-            // } catch (timerErr) {
-            //     console.warn("Timer failed but email was sent:", timerErr);
-            // }
-            
-            return; // EXIT HERE. Do not let it reach any error code.
+            return; // EXIT HERE.
         } 
         
-        // If we reach here, response was NOT ok
         showToast("Server rejected request. Try again.", "error");
 
     } catch (err) {
-        // This catch block will now ONLY show a toast if the FETCH itself fails (e.g. No Internet)
         console.error("Network/System Error:", err);
         showToast("Connection failed. Check your internet.", "error");
     } finally {
-        // Always reset button state if it didn't succeed
-        if (sendBtn.innerText === "SENDING...") {
+        // Reset button only if it is still visible (meaning it didn't succeed)
+        if (sendBtn && sendBtn.style.display !== 'none') {
             sendBtn.disabled = false;
             sendBtn.innerText = "RETRY SENDING";
         }
